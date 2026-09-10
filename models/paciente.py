@@ -2,7 +2,7 @@
 Model de Paciente usando SQLAlchemy ORM.
 Substitui o SQL cru da v1 por uma camada tipada e testável.
 """
-from datetime import datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import validates
@@ -19,7 +19,7 @@ class Paciente(Base):
     cpf = Column(String(11), unique=True, nullable=False, index=True)
     cep = Column(String(8), nullable=False)
     telefone = Column(String(20), nullable=True)
-    criado_em = Column(DateTime, default=datetime.utcnow)
+    criado_em = Column(DateTime, default=datetime.now(UTC))
 
     @validates("cpf")
     def _valida_cpf(self, key, value):
