@@ -2,7 +2,7 @@
 Model de Consulta: liga um Paciente a um Profissional em uma data/hora.
 Este é o relacionamento central do domínio da clínica.
 """
-from datetime import datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, validates
@@ -21,7 +21,7 @@ class Consulta(Base):
     data_hora = Column(DateTime, nullable=False)
     status = Column(String(20), default="agendada", nullable=False)
     observacoes = Column(String(500), nullable=True)
-    criado_em = Column(DateTime, default=datetime.utcnow)
+    criado_em = Column(DateTime, default=datetime.now(UTC))
 
     paciente = relationship("Paciente")
     profissional = relationship("Profissional", back_populates="consultas")

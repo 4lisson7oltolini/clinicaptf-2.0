@@ -73,3 +73,33 @@ def test_profissional_livre_agora_quando_nao_ha_consulta_proxima(db_session, pac
     _, profissional = paciente_e_profissional
 
     assert profissional_ocupado_agora(db_session, profissional.id) is False
+
+def test_nao_permite_status_invalido(db_session, paciente_e_profissional):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    with pytest.raises(ValueError):
+        consulta.status = "qualquer_status"
+
+
+def test_consulta_possui_paciente_e_profissional(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    assert consulta.paciente.id == paciente.id
+    assert consulta.profissional.id == profissional.id
