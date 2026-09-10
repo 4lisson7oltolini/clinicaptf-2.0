@@ -3,6 +3,8 @@ Tela Início (dashboard): visão rápida do dia para quem abre o sistema pela ma
 """
 import streamlit as st
 
+import models 
+
 from database.connection import SessionLocal
 from services.profissional_service import listar_profissionais
 from services.consulta_service import (
