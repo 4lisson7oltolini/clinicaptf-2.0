@@ -10,8 +10,11 @@ A estrutura do banco de dados é gerenciada pelo Alembic.
 import streamlit as st
 
 from database.connection import SessionLocal
+from database.initialization import inicializar_aplicacao
 from services.auth_service import autenticar
 
+
+inicializar_aplicacao()
 
 st.set_page_config(
     page_title="ClinicaPTF 2.0",

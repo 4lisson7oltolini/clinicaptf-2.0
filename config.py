@@ -25,15 +25,15 @@ load_dotenv()
 
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-# ============================================================
-# Banco de dados
-# ============================================================
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./clinicaptf.db",
-).strip()
+if APP_ENV == "demo":
+    DATABASE_URL = os.getenv(
+        "DEMO_DATABASE_URL",
+        "sqlite:///./clinicaptf_demo.db",
+    ).strip()
+elif not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./clinicaptf.db"
 
 
 # ============================================================
@@ -64,10 +64,10 @@ def validate_config() -> None:
             "DATABASE_URL não foi definida."
         )
 
-    if APP_ENV not in {"development", "testing", "production"}:
+    if APP_ENV not in {"development", "testing", "demo", "production"}:
         raise ValueError(
             "APP_ENV inválido. "
-            "Use: development, testing ou production."
+            "Use: development, testing, demo ou production."
         )
 
     if APP_ENV == "production":
