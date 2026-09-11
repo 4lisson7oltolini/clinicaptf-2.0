@@ -29,7 +29,6 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
-.pytest_cache/
 
 # ==============================
 # Banco de dados local
