@@ -1,4 +1,4 @@
-# ClinicPTF 2.0
+# ClinicaPTF 2.0
 
 Sistema de gerenciamento para clínicas desenvolvido com **Python + Streamlit**, criado como uma evolução arquitetural do ClinicPTF 1.0.
 
