@@ -53,6 +53,20 @@ Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
 
 ---
 
+# Screenshots
+
+### login
+![Tela de login da Clínica PTF 2.0](printclinica.pdf)
+### Inicio
+![Tela de Inicio da Clínica PTF 2.0](printinicio.pdf)
+### Pacientes
+![Tela de Pacientes da Clínica PTF 2.0](printpacientes.pdf)
+### Profissionais
+![Tela de Profissionais da Clínica PTF 2.0](printprofissionais.pdf)
+### Agenda
+![Tela de Agenda da Clínica PTF 2.0](printagenda.pdf)
+
+
 # Funcionalidades
 
 ### Pacientes
