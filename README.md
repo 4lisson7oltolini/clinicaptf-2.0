@@ -10,7 +10,71 @@ A versão 2.0 foi reconstruída com foco em organização de código, segurança
 
 ## Sobre o projeto
 
-A **Clínica PTF 2.0** é um sistema de gerenciamento desenvolvido para centralizar informações e operações básicas de uma clínica.
+O **ClinicPTF 2.0** é um sistema de gerenciamento de clínica desenvolvido como projeto de estudo e portfólio, com foco em práticas utilizadas no desenvolvimento de aplicações reais.
+
+O sistema permite gerenciar:
+
+* Pacientes
+* Profissionais
+* Consultas
+* Usuários
+* Dashboard
+
+A principal evolução em relação à primeira versão está na arquitetura.
+
+Em vez de concentrar interface, regras de negócio e acesso ao banco no mesmo código, o projeto foi dividido em camadas independentes:
+
+```text
+Interface
+    ↓
+Pages / Components
+    ↓
+Services
+    ↓
+Models
+    ↓
+Database
+    ↓
+SQLite / PostgreSQL
+```
+
+Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
+
+---
+
+# Screenshots
+
+### login
+![Tela de login da Clínica PTF 2.0](printclinica.pdf)
+### Inicio
+![Tela de Inicio da Clínica PTF 2.0](printinicio.pdf)
+### Pacientes
+![Tela de Pacientes da Clínica PTF 2.0](printpacientes.pdf)
+### Profissionais
+![Tela de Profissionais da Clínica PTF 2.0](printprofissionais.pdf)
+### Agenda
+![Tela de Agenda da Clínica PTF 2.0](printagenda.pdf)
+
+
+# Funcionalidades
+
+### Pacientes
+
+* Cadastro de pacientes
+* Listagem
+* Pesquisa
+* Remoção
+* Validação de CPF
+* Validação de CEP
+* Controle de CPF duplicado
+
+### Profissionais
+
+* Cadastro de profissionais
+* Listagem
+* Especialidade
+* Registro profissional
+* Controle de registro duplicado
 
 O projeto foi desenvolvido com uma arquitetura em camadas, buscando aplicar boas práticas de desenvolvimento de software e conceitos estudados durante a formação em Desenvolvimento de Sistemas.
 
