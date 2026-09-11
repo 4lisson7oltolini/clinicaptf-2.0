@@ -45,9 +45,9 @@ Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
 # Screenshots
 
 ### login
-![Tela de login da Clínica PTF 2.0](Screenshot/printinicio-1.png)
+![Tela de login da Clínica PTF 2.0](Screenshot/printclinicaptf-1.png)
 ### Inicio
-![Tela de Inicio da Clínica PTF 2.0](Screenshot/printclinica-1.png)
+![Tela de Inicio da Clínica PTF 2.0](Screenshot/printinicio-1.png)
 ### Pacientes
 ![Tela de Pacientes da Clínica PTF 2.0](Screenshot/printpacientes-1.png)
 ### Profissionais
