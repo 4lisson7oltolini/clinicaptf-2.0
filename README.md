@@ -45,15 +45,15 @@ Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
 # Screenshots
 
 ### login
-![Tela de login da Clínica PTF 2.0](Screenshot\printclinica.pdf)
+![Tela de login da Clínica PTF 2.0](Screenshot\printinicio-1.png)
 ### Inicio
-![Tela de Inicio da Clínica PTF 2.0](Screenshot\printclinica.pdf)
+![Tela de Inicio da Clínica PTF 2.0](Screenshot\printclinica-1.png)
 ### Pacientes
-![Tela de Pacientes da Clínica PTF 2.0](Screenshot\printpacientes.pdf)
+![Tela de Pacientes da Clínica PTF 2.0](Screenshot\printpacientes-1.png)
 ### Profissionais
-![Tela de Profissionais da Clínica PTF 2.0](Screenshot\printprofissionais.pdf)
+![Tela de Profissionais da Clínica PTF 2.0](Screenshot\printprofissionais-1.png)
 ### Agenda
-![Tela de Agenda da Clínica PTF 2.0](Screenshot\printagenda.pdf)
+![Tela de Agenda da Clínica PTF 2.0](Screenshot\printagenda-1.png)
 
 
 # Funcionalidades
