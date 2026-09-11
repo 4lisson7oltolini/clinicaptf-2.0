@@ -1,19 +1,8 @@
-# ClinicPTF 2.0
+# Clínica PTF 2.0
 
-Sistema de gerenciamento para clínicas desenvolvido com **Python + Streamlit**, criado como uma evolução arquitetural do ClinicPTF 1.0.
+Sistema de gerenciamento para clínicas desenvolvido com **Python + Streamlit**, criado como uma evolução arquitetural do projeto Clínica PTF 1.0.
 
-A versão 2.0 foi reconstruída com foco em:
-
-* Arquitetura em camadas
-* Autenticação e hash seguro de senhas
-* Persistência com SQLAlchemy
-* Migrações com Alembic
-* Testes automatizados com Pytest
-* Integração contínua com GitHub Actions
-* Ambiente de demonstração isolado
-* Compatibilidade com PostgreSQL
-* Containerização com Docker
-* Preparação para deploy
+A versão 2.0 foi reconstruída com foco em organização de código, segurança, testes automatizados, persistência de dados, migrações de banco de dados e preparação para deploy.
 
 > **Status:** Em desenvolvimento
 
@@ -87,497 +76,211 @@ Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
 * Registro profissional
 * Controle de registro duplicado
 
-### Agenda
+O projeto foi desenvolvido com uma arquitetura em camadas, buscando aplicar boas práticas de desenvolvimento de software e conceitos estudados durante a formação em Desenvolvimento de Sistemas.
 
-* Agendamento de consultas
-* Seleção de paciente
-* Seleção de profissional
-* Data e horário
-* Observações
-* Status da consulta
-* Verificação de conflitos de horário
+Entre os principais recursos estão:
 
-### Autenticação
-
-* Login de usuários
-* Hash de senhas com bcrypt
-* Controle de sessão
-* Proteção das páginas internas
-* Criação inicial de administrador
-
-### Dashboard
-
-* Consultas
-* Profissionais
-* Informações da agenda
-* Indicadores da clínica
+* Autenticação de usuários
+* Senhas armazenadas com hash
+* Cadastro e gerenciamento de pacientes
+* Cadastro e gerenciamento de profissionais
+* Gerenciamento de consultas
+* Agenda
+* Persistência de dados
+* Validação de informações
+* Migrações de banco de dados
+* Testes automatizados
+* Ambiente de demonstração
+* Integração contínua
+* Preparação para deploy
+* Suporte a SQLite e PostgreSQL
+* Containerização com Docker
 
 ---
 
-# Arquitetura
+## Tecnologias utilizadas
 
-O projeto utiliza uma arquitetura organizada em camadas.
+### Backend
 
-```text
-                    ┌───────────────────┐
-                    │      Usuário      │
-                    └─────────┬─────────┘
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │     Streamlit     │
-                    │ Pages / Components│
-                    └─────────┬─────────┘
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │     Services      │
-                    │ Regras de negócio │
-                    └─────────┬─────────┘
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │      Models       │
-                    │     SQLAlchemy    │
-                    └─────────┬─────────┘
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │      Database     │
-                    │ SQLite / Postgres │
-                    └───────────────────┘
-```
+* Python
+* SQLAlchemy
+* Alembic
+* Pydantic
+* Passlib
+* bcrypt
 
-A separação de responsabilidades permite modificar uma camada sem precisar alterar toda a aplicação.
+### Interface
+
+* Streamlit
+
+### Banco de dados
+
+* SQLite
+* PostgreSQL
+
+### Testes
+
+* Pytest
+* Pytest-Cov
+* Faker
+
+### DevOps
+
+* Git
+* GitHub
+* GitHub Actions
+* Docker
 
 ---
 
-# Estrutura do projeto
+## Arquitetura
+
+O projeto utiliza uma arquitetura organizada em camadas para separar responsabilidades.
 
 ```text
-clinicaptf-2.0/
-│
-├── .github/
-│   └── workflows/
-│       └── test.yml
-│
-├── .streamlit/
-│   └── config.toml
-│
-├── alembic/
-│   ├── versions/
-│   │   └── 93bf205e4433_create_initial_database_schema.py
-│   ├── env.py
-│   ├── README
-│   └── script.py.mako
-│
-├── components/
-│   ├── __init__.py
-│   └── paciente_form.py
-│
-├── database/
-│   ├── __init__.py
-│   ├── connection.py
-│   └── initialization.py
-│
-├── models/
-│   ├── __init__.py
-│   ├── consulta.py
-│   ├── paciente.py
-│   ├── profissional.py
-│   └── usuario.py
-│
-├── pages/
-│   ├── 0_Inicio.py
-│   ├── 1_Pacientes.py
-│   ├── 2_Profissionais.py
-│   └── 3_Agenda.py
-│
-├── services/
-│   ├── __init__.py
-│   ├── auth_service.py
-│   ├── consulta_service.py
-│   ├── paciente_service.py
-│   └── profissional_service.py
-│
-├── test/
-│   ├── __init__.py
-│   ├── auth_service_test.py
-│   ├── consulta_service_test.py
-│   ├── conftest.py
-│   ├── paciente_service_test.py
-│   ├── profissional_service_test.py
-│   └── test_validators.py
-│
-├── utils/
-│   ├── __init__.py
-│   ├── auth_guard.py
-│   └── validators.py
-│
-├── app.py
-├── config.py
-├── create_admin.py
-├── seed_demo.py
-├── Dockerfile
-├── pytest.ini
-├── requirements.txt
-├── requirements-dev.txt
-├── .env.example
-└── .gitignore
+Interface
+   |
+   v
+Pages / Components
+   |
+   v
+Services
+   |
+   v
+Models
+   |
+   v
+Database
 ```
 
 ---
 
-# Responsabilidade das camadas
+## Banco de dados
 
-## `pages/`
+A Clínica PTF 2.0 utiliza **SQLAlchemy** como camada de acesso ao banco de dados.
 
-Interface principal da aplicação.
+O controle da estrutura do banco é realizado pelo **Alembic**.
 
-Contém:
+Isso permite versionar alterações no banco de dados e reproduzir a estrutura da aplicação em diferentes ambientes.
 
-```text
-0_Inicio.py
-1_Pacientes.py
-2_Profissionais.py
-3_Agenda.py
-```
-
-Responsável por:
-
-* Interface
-* Formulários
-* Tabelas
-* Navegação
-* Mensagens ao usuário
-
----
-
-## `components/`
-
-Componentes reutilizáveis da interface.
-
-Exemplo:
-
-```text
-paciente_form.py
-```
-
-Responsável pelo formulário de cadastro de pacientes.
-
----
-
-## `services/`
-
-Contém as principais regras de negócio:
-
-```text
-auth_service.py
-consulta_service.py
-paciente_service.py
-profissional_service.py
-```
-
-Exemplos:
-
-* Criar pacientes
-* Criar profissionais
-* Autenticar usuários
-* Agendar consultas
-* Verificar conflitos de horários
-* Buscar registros
-* Remover registros
-
-As páginas não precisam implementar diretamente essas regras.
-
----
-
-## `models/`
-
-Contém os modelos ORM do SQLAlchemy:
-
-```text
-Paciente
-Profissional
-Consulta
-Usuario
-```
-
-Eles representam as entidades persistidas no banco.
-
----
-
-## `database/`
-
-Responsável pela infraestrutura de banco.
-
-```text
-connection.py
-initialization.py
-```
-
-`connection.py` gerencia:
-
-* Engine
-* Sessões
-* Conexões
-* SQLAlchemy Base
-
-`initialization.py` é responsável pela inicialização automática do ambiente.
-
----
-
-## `utils/`
-
-Funções auxiliares:
-
-```text
-auth_guard.py
-validators.py
-```
-
-Inclui:
-
-* Validação de CPF
-* Validação de CEP
-* Controle de autenticação
-
----
-
-# Banco de dados
-
-O projeto utiliza **SQLAlchemy** como ORM.
-
-Atualmente é possível trabalhar com:
-
-```text
-SQLite
-PostgreSQL
-```
-
-O banco utilizado depende da variável:
-
-```env
-DATABASE_URL
-```
-
-### Desenvolvimento
-
-Por padrão:
-
-```env
-DATABASE_URL=sqlite:///./clinicaptf.db
-```
-
-### Produção
-
-Exemplo:
-
-```env
-DATABASE_URL=postgresql+psycopg2://usuario:senha@localhost:5432/clinicaptf
-```
-
-A aplicação mantém a mesma camada ORM para os dois bancos.
-
----
-
-# Migrações com Alembic
-
-O schema do banco é controlado pelo **Alembic**.
-
-A migration inicial está localizada em:
-
-```text
-alembic/versions/
-```
-
-Migration atual:
-
-```text
-93bf205e4433_create_initial_database_schema.py
-```
-
-Para atualizar o banco:
+### Executar migrations
 
 ```bash
 alembic upgrade head
 ```
 
-Para verificar a migration atual:
+### Verificar a versão atual
 
 ```bash
 alembic current
 ```
 
-Para verificar se existem alterações de schema não migradas:
+### Verificar se existem alterações pendentes
 
 ```bash
 alembic check
 ```
 
-Essa abordagem mantém o schema do banco versionado e controlado pelo projeto.
+O schema do banco é controlado exclusivamente pelas migrations do Alembic.
 
 ---
 
-# Inicialização automática
+## Inicialização automática
 
-O arquivo:
+A aplicação possui um mecanismo de inicialização em:
 
 ```text
 database/initialization.py
 ```
 
-centraliza a preparação do ambiente.
+Durante a inicialização, o sistema:
 
-Durante a inicialização:
+1. Carrega as configurações do ambiente.
+2. Executa as migrations pendentes.
+3. Prepara o banco de dados.
+4. Caso esteja no ambiente de demonstração, cria os dados fictícios necessários.
 
-```text
-Aplicação
-    ↓
-Inicialização
-    ↓
-Alembic
-    ↓
-upgrade head
-    ↓
-Banco atualizado
-```
-
-No ambiente `demo`, também são criados automaticamente dados fictícios.
+Isso permite que o ambiente seja preparado automaticamente antes da utilização da aplicação.
 
 ---
 
-# Ambiente Demo
+## Ambiente de demonstração
 
-O projeto possui um ambiente específico para demonstração:
+O projeto possui um ambiente específico para demonstração.
 
-```env
-APP_ENV=demo
+Para executar:
+
+### Windows PowerShell
+
+```powershell
+$env:APP_ENV="demo"
+python -m streamlit run app.py
 ```
 
-Nesse ambiente, a aplicação utiliza:
+O ambiente demo utiliza um banco SQLite separado:
 
 ```text
-clinicaptf_demo.db
+clinicptf_demo.db
 ```
 
-O banco é criado automaticamente e recebe dados fictícios para facilitar a demonstração.
+Os dados utilizados são fictícios e servem exclusivamente para demonstração e testes.
 
-### Dados incluídos
-
-Pacientes de exemplo:
-
-```text
-Maria Silva
-João Souza
-Ana Costa
-```
-
-Profissionais de exemplo:
-
-```text
-Dra. Ana Oliveira
-Dr. Carlos Mendes
-```
-
-Também é criado automaticamente o usuário:
+### Credenciais de demonstração
 
 ```text
 Usuário: demo
 Senha: demo1234
 ```
 
-> Os dados acima são exclusivamente fictícios e destinados à demonstração.
+O ambiente de demonstração cria automaticamente:
+
+* Usuário demo
+* Pacientes fictícios
+* Profissionais fictícios
 
 ---
 
-# Executando localmente
+## Configuração local
 
-## 1. Clonar o projeto
-
-```bash
-git clone https://github.com/4lisson7oltolini/clinicaptf-2.0.git
-```
-
-Entrar na pasta:
+Clone o projeto:
 
 ```bash
-cd clinicaptf-2.0
+git clone https://github.com/4lisson7oltolini/clinicptf-2.0.git
 ```
 
----
+Entre no diretório:
 
-## 2. Criar ambiente virtual
+```bash
+cd clinicptf-2.0
+```
 
-### Windows
+Crie um ambiente virtual:
 
-```powershell
+```bash
 python -m venv .venv
 ```
 
-### Linux/macOS
-
-```bash
-python3 -m venv .venv
-```
-
----
-
-## 3. Ativar o ambiente virtual
-
-### Windows PowerShell
+Ative o ambiente virtual no Windows:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### Windows CMD
-
-```cmd
-.venv\Scripts\activate
-```
-
-### Linux/macOS
+Instale as dependências:
 
 ```bash
-source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Para instalar também as dependências de desenvolvimento:
+
+```bash
+python -m pip install -r requirements-dev.txt
 ```
 
 ---
 
-## 4. Atualizar o pip
-
-```bash
-python -m pip install --upgrade pip
-```
-
----
-
-## 5. Instalar dependências
-
-Para executar a aplicação:
-
-```bash
-pip install -r requirements.txt
-```
-
-Para desenvolvimento e testes:
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-O arquivo de desenvolvimento inclui as dependências de runtime e ferramentas como:
-
-```text
-pytest
-pytest-cov
-faker
-```
-
----
-
-# Configuração do ambiente
+## Variáveis de ambiente
 
 Crie um arquivo:
 
@@ -585,7 +288,7 @@ Crie um arquivo:
 .env
 ```
 
-A partir do exemplo:
+Baseado no:
 
 ```text
 .env.example
@@ -594,353 +297,100 @@ A partir do exemplo:
 Exemplo:
 
 ```env
-DATABASE_URL=sqlite:///./clinicaptf.db
+DATABASE_URL=sqlite:///./clinicptf.db
 
-DEMO_DATABASE_URL=sqlite:///./clinicaptf_demo.db
+DEMO_DATABASE_URL=sqlite:///./clinicptf_demo.db
 
 APP_ENV=development
 
-SECRET_KEY=troque-esta-chave
+SECRET_KEY=change-me-in-your-local-env
 ```
 
-O arquivo `.env` é ignorado pelo Git e **não deve ser publicado**.
+O arquivo `.env` não deve ser versionado no Git.
 
 ---
 
-# Criando um usuário administrador
+## Executando a aplicação
 
-Para o ambiente de desenvolvimento:
+Depois de instalar as dependências:
 
 ```bash
-python create_admin.py
-```
-
-O script solicitará:
-
-```text
-Usuário:
-Senha:
-Nome completo:
-```
-
-O usuário será armazenado no banco com a senha protegida por hash.
-
----
-
-# Executando a aplicação
-
-Na raiz do projeto:
-
-```bash
-streamlit run app.py
-```
-
-A aplicação estará disponível normalmente em:
-
-```text
-http://localhost:8501
-```
-
----
-
-# Executando o Demo localmente
-
-Para iniciar o ambiente de demonstração:
-
-### PowerShell
-
-```powershell
-$env:APP_ENV="demo"
 python -m streamlit run app.py
 ```
 
-A aplicação executará automaticamente:
-
-```text
-Alembic
-   ↓
-Banco demo
-   ↓
-Dados fictícios
-   ↓
-Usuário demo
-   ↓
-Aplicação
-```
-
-### Login
-
-```text
-Usuário: demo
-Senha: demo1234
-```
+A aplicação será iniciada localmente pelo Streamlit.
 
 ---
 
-# Testes automatizados
+## Testes
 
-O projeto utiliza:
+O projeto utiliza **Pytest** para testes automatizados.
 
-* Pytest
-* pytest-cov
-* Faker
-
-Os testes estão em:
-
-```text
-test/
-```
-
-Para executar:
+Execute todos os testes:
 
 ```bash
 python -m pytest
 ```
 
-Para cobertura:
+Para executar com cobertura:
 
 ```bash
-python -m pytest --cov
+python -m pytest --cov=.
 ```
 
 Os testes abrangem principalmente:
 
-```text
-Auth Service
-Consulta Service
-Paciente Service
-Profissional Service
-Validators
-```
+* Autenticação
+* Usuários
+* Pacientes
+* Profissionais
+* Consultas
+* Validações
+* Regras dos services
 
 ---
 
-# Banco isolado para testes
+## Integração contínua
 
-Os testes utilizam um banco SQLite em memória.
-
-Isso permite executar os testes sem alterar o banco utilizado pela aplicação.
+O projeto possui um workflow do **GitHub Actions**:
 
 ```text
-Testes
-   ↓
-SQLite em memória
-   ↓
-Dados temporários
+.github/workflows/test.yml
 ```
 
-Assim:
+A cada push e pull request configurado, o workflow:
 
-* O banco de desenvolvimento não é alterado.
-* Os testes começam com um ambiente isolado.
-* Não é necessário PostgreSQL para executar a suíte.
-* Os dados desaparecem após os testes.
+1. Configura o ambiente Python.
+2. Instala as dependências de desenvolvimento.
+3. Executa os testes automatizados.
+4. Informa se a alteração passou ou falhou.
+
+O objetivo é evitar que alterações com testes quebrados sejam integradas ao projeto sem serem identificadas.
 
 ---
 
-# Integração contínua
+## Dependências
 
-O projeto utiliza **GitHub Actions** para executar os testes automaticamente.
+As dependências foram separadas em dois arquivos.
 
-Workflow:
+### requirements.txt
 
-```text
-.github/
-└── workflows/
-    └── test.yml
-```
-
-O pipeline executa:
-
-```text
-Git Push / Pull Request
-        ↓
-Checkout
-        ↓
-Configuração do Python
-        ↓
-Instalação das dependências
-        ↓
-Pytest
-        ↓
-Resultado
-```
-
-As dependências de desenvolvimento são instaladas através de:
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-Isso mantém as dependências de runtime separadas das ferramentas utilizadas apenas durante desenvolvimento e CI.
-
----
-
-# Qualidade do código
-
-O projeto utiliza algumas práticas para manter a base organizada:
-
-* Separação de responsabilidades
-* Services para regras de negócio
-* Models para persistência
-* Components reutilizáveis
-* Testes automatizados
-* Variáveis de ambiente
-* Migrações versionadas
-* `.gitignore`
-* CI com GitHub Actions
-* Ambiente demo separado
-
----
-
-# Autenticação e segurança
-
-As senhas **não são armazenadas em texto puro**.
-
-O sistema utiliza:
-
-```text
-Passlib
-+
-bcrypt
-```
-
-Para criação da senha:
-
-```python
-pwd_context.hash(senha)
-```
-
-Para autenticação:
-
-```python
-pwd_context.verify(
-    senha,
-    usuario.senha_hash
-)
-```
-
-As páginas protegidas utilizam:
-
-```text
-utils/auth_guard.py
-```
-
-para verificar se existe uma sessão autenticada.
-
----
-
-# Modelo de autenticação
-
-O fluxo de login é:
-
-```text
-Usuário
-   ↓
-Tela de Login
-   ↓
-Auth Service
-   ↓
-Banco
-   ↓
-Verificação do hash
-   ↓
-Session State
-   ↓
-Dashboard
-```
-
-Depois da autenticação, o usuário pode acessar:
-
-```text
-Início
-Pacientes
-Profissionais
-Agenda
-```
-
----
-
-# Controle de conflitos de agenda
-
-O serviço de consultas verifica conflitos de horário antes de realizar um novo agendamento.
-
-A duração padrão utilizada é:
-
-```text
-50 minutos
-```
-
-Quando existe conflito, o serviço gera:
-
-```text
-ConflitoDeHorarioError
-```
-
-Isso evita que um mesmo profissional seja agendado para consultas incompatíveis no mesmo período.
-
----
-
-# Docker
-
-O projeto possui um `Dockerfile` para facilitar a execução em ambientes isolados.
-
-Construir a imagem:
-
-```bash
-docker build -t clinicaptf-2 .
-```
-
-Executar:
-
-```bash
-docker run -p 8501:8501 clinicaptf-2
-```
-
-A aplicação ficará disponível em:
-
-```text
-http://localhost:8501
-```
-
-> Para produção, recomenda-se utilizar PostgreSQL em vez de depender de SQLite dentro de um container.
-
----
-
-# Dependências
-
-## Runtime
-
-O arquivo:
-
-```text
-requirements.txt
-```
-
-contém as dependências necessárias para executar a aplicação.
-
-Principais tecnologias:
+Contém somente as dependências necessárias para executar a aplicação:
 
 ```text
 Streamlit
 SQLAlchemy
-Alembic
-psycopg2-binary
+PostgreSQL
 Pydantic
 python-dotenv
 Passlib
 bcrypt
+Alembic
 ```
 
-## Desenvolvimento
+### requirements-dev.txt
 
-O arquivo:
-
-```text
-requirements-dev.txt
-```
-
-estende as dependências de runtime e adiciona:
+Contém as dependências utilizadas durante o desenvolvimento e testes:
 
 ```text
 pytest
@@ -948,296 +398,174 @@ pytest-cov
 faker
 ```
 
+Essa separação facilita a preparação do projeto para ambientes de produção.
+
 ---
 
-# Deploy
+## Docker
 
-O projeto foi preparado para execução como aplicação web através do **Streamlit Community Cloud**.
+O projeto possui um `Dockerfile` para facilitar a criação de um ambiente isolado.
 
-A configuração visual da aplicação está em:
+Para criar a imagem:
 
-```text
-.streamlit/config.toml
+```bash
+docker build -t clinicaptf .
 ```
 
-O arquivo define:
+Para executar:
 
-* Tema
-* Cores
-* Configurações do servidor
-* Aparência da aplicação
-
-O ambiente de demonstração utiliza SQLite e inicialização automática através do Alembic.
-
-> Como o armazenamento local do Streamlit Community Cloud não deve ser tratado como armazenamento persistente, o SQLite é utilizado aqui principalmente para demonstração. Para uma aplicação real, a arquitetura deve utilizar PostgreSQL ou outro banco persistente.
-
----
-
-# Fluxo de cadastro de paciente
-
-Um exemplo do fluxo arquitetural:
-
-```text
-Usuário
-   ↓
-Página Pacientes
-   ↓
-paciente_form.py
-   ↓
-paciente_service.py
-   ↓
-Validações
-   ↓
-Modelo Paciente
-   ↓
-SQLAlchemy
-   ↓
-Banco de dados
+```bash
+docker run -p 8501:8501 clinicaptf
 ```
 
-A interface não precisa conhecer detalhes da persistência.
+A aplicação poderá ser acessada pela porta:
 
-Essa separação facilita a realização de testes unitários sobre as regras de negócio.
+```text
+8501
+```
 
----
-
-# Tecnologias utilizadas
-
-| Tecnologia         | Utilização                     |
-| ------------------ | ------------------------------ |
-| **Python**         | Linguagem principal            |
-| **Streamlit**      | Interface web                  |
-| **SQLAlchemy**     | ORM e persistência             |
-| **Alembic**        | Migrações do banco             |
-| **SQLite**         | Desenvolvimento e demonstração |
-| **PostgreSQL**     | Opção para produção            |
-| **Passlib**        | Gerenciamento de hashes        |
-| **bcrypt**         | Hash de senhas                 |
-| **Pydantic**       | Modelagem/validação            |
-| **python-dotenv**  | Variáveis de ambiente          |
-| **Pytest**         | Testes automatizados           |
-| **pytest-cov**     | Cobertura de testes            |
-| **Faker**          | Dados para testes              |
-| **Docker**         | Containerização                |
-| **GitHub Actions** | Integração contínua            |
+Para ambientes de produção, recomenda-se utilizar PostgreSQL em vez de SQLite.
 
 ---
 
-# Principais diretórios
+## PostgreSQL
 
-| Diretório     | Responsabilidade                 |
-| ------------- | -------------------------------- |
-| `components/` | Componentes reutilizáveis        |
-| `database/`   | Conexão e inicialização do banco |
-| `models/`     | Modelos SQLAlchemy               |
-| `pages/`      | Interface Streamlit              |
-| `services/`   | Regras de negócio                |
-| `utils/`      | Validações e autenticação        |
-| `test/`       | Testes automatizados             |
-| `alembic/`    | Migrações do banco               |
-| `.github/`    | Workflows do GitHub Actions      |
-| `.streamlit/` | Configuração do Streamlit        |
+O sistema foi preparado para trabalhar com PostgreSQL através do SQLAlchemy.
+
+Exemplo de configuração:
+
+```env
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/clinicaptf
+```
+
+A aplicação identifica o banco através da variável `DATABASE_URL`.
+
+A conexão com SQLite continua disponível para desenvolvimento local e demonstrações.
 
 ---
 
-# Roadmap
+## Segurança
 
-### Arquitetura e infraestrutura
+A Clínica PTF 2.0 foi estruturada considerando algumas práticas básicas de segurança.
 
-* [x] Separação em camadas
+Entre elas:
+
+* Senhas não são armazenadas em texto puro.
+* Senhas são protegidas utilizando hash.
+* Informações sensíveis são carregadas através de variáveis de ambiente.
+* Arquivos `.env` não são versionados.
+* Bancos locais são ignorados pelo Git.
+* A aplicação possui controle de sessão.
+* O ambiente de produção exige uma `SECRET_KEY` configurada.
+* O ambiente demo utiliza dados fictícios.
+
+As credenciais apresentadas neste README são exclusivamente para o ambiente de demonstração.
+
+---
+
+## Desenvolvimento
+
+O desenvolvimento do projeto segue uma organização baseada em branches.
+
+Exemplo:
+
+```text
+main
+│
+└── feature/foundation
+```
+
+As alterações são desenvolvidas em branches específicas antes de serem integradas à branch principal.
+
+Exemplo:
+
+```bash
+git checkout -b feature/nova-funcionalidade
+```
+
+Depois das alterações:
+
+```bash
+git add .
+git commit -m "feat: add new functionality"
+git push origin feature/nova-funcionalidade
+```
+
+---
+
+## Roadmap
+
+### Fundação
+
+* [x] Estrutura inicial do projeto
+* [x] Arquitetura em camadas
+* [x] Configuração por variáveis de ambiente
 * [x] SQLAlchemy
-* [x] SQLite
-* [x] Suporte a PostgreSQL
 * [x] Alembic
-* [x] Variáveis de ambiente
-* [x] Ambiente demo
-* [x] Docker
-* [x] GitHub Actions
-* [x] Testes automatizados
-
-### Sistema
-
+* [x] Migrations
 * [x] Autenticação
-* [x] Pacientes
-* [x] Profissionais
-* [x] Agenda
-* [x] Dashboard
-* [x] Validação de CPF
-* [x] Validação de CEP
-* [x] Controle de conflitos de agenda
+* [x] Hash de senhas
+* [x] Testes automatizados
+* [x] GitHub Actions
+* [x] Ambiente demo
+* [x] Dados fictícios
+* [x] Configuração do Streamlit
+* [x] Docker
 
-### Próximas evoluções
+### Próximas etapas
 
-* [ ] Sistema de permissões por função
-* [ ] Perfil Administrador / Profissional
-* [ ] Edição de pacientes
-* [ ] Histórico de consultas
-* [ ] Prontuário eletrônico
+* [ ] Melhorar dashboard
+* [ ] Melhorar agenda
+* [ ] Controle de permissões por usuário
 * [ ] Relatórios
-* [ ] Exportação para PDF
-* [ ] Logs de auditoria
-* [ ] Backup automático
-* [ ] Testes de integração
-* [ ] Testes de interface
-* [ ] Docker Compose
-* [ ] PostgreSQL no ambiente de produção
-* [ ] HTTPS
-* [ ] Melhorias de UX/UI
+* [ ] Exportação de dados
+* [ ] Melhorias na experiência do usuário
+* [ ] PostgreSQL em ambiente hospedado
+* [ ] Deploy público
+* [ ] Monitoramento
+* [ ] Documentação da API, caso seja adicionada
 
 ---
 
-# Sobre produção
+## Objetivo do projeto
 
-O ClinicPTF 2.0 é um projeto de estudo e portfólio.
+A Clínica PTF 2.0 também funciona como projeto de portfólio para demonstrar conhecimentos em:
 
-Apesar de possuir autenticação, persistência, testes e uma arquitetura organizada, **não deve ser considerado automaticamente pronto para utilização em uma clínica real**.
-
-Uma implantação real exigiria, entre outros pontos:
-
-* LGPD
-* Controle de acesso granular
-* Auditoria
-* Backup
-* Criptografia
-* HTTPS
-* Gerenciamento seguro de sessões
-* Logs
-* Monitoramento
-* Política de retenção de dados
-* Recuperação de desastres
-* Hardening da infraestrutura
-
----
-
-# Segurança do repositório
-
-Arquivos sensíveis não devem ser versionados.
-
-O projeto ignora:
-
-```text
-.env
-*.db
-*.sqlite
-*.sqlite3
-__pycache__/
-.pytest_cache/
-```
-
-As configurações podem ser fornecidas através de variáveis de ambiente.
-
-O arquivo:
-
-```text
-.env.example
-```
-
-serve apenas como modelo.
-
----
-
-# Guia rápido
-
-Para executar rapidamente em uma máquina com Python instalado:
-
-```bash
-git clone https://github.com/4lisson7oltolini/clinicaptf-2.0.git
-
-cd clinicaptf-2.0
-
-python -m venv .venv
-```
-
-### Windows
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### Linux/macOS
-
-```bash
-source .venv/bin/activate
-```
-
-Depois:
-
-```bash
-python -m pip install --upgrade pip
-
-pip install -r requirements.txt
-
-python create_admin.py
-
-streamlit run app.py
-```
-
-Acesse:
-
-```text
-http://localhost:8501
-```
-
----
-
-# Guia rápido — Demo
-
-Para executar a versão de demonstração:
-
-```powershell
-$env:APP_ENV="demo"
-python -m streamlit run app.py
-```
-
-Credenciais:
-
-```text
-Usuário: demo
-Senha: demo1234
-```
-
----
-
-# Autor
-
-**Alisson**
-
-Estudante de Desenvolvimento de Sistemas e desenvolvedor do ClinicPTF 2.0.
-
-O projeto foi desenvolvido como evolução do ClinicPTF 1.0, com foco em:
-
-* Desenvolvimento web
 * Python
-* Arquitetura de software
+* Desenvolvimento web
 * Banco de dados
+* SQLAlchemy
+* Arquitetura de software
 * Testes automatizados
-* Segurança
-* Git/GitHub
+* Git e GitHub
 * CI/CD
-* Boas práticas de desenvolvimento
+* Docker
+* Variáveis de ambiente
+* Migrações de banco de dados
+* Desenvolvimento de aplicações com Streamlit
+
+O projeto busca demonstrar não apenas a criação de uma interface, mas também a construção de uma aplicação organizada, testável e preparada para evolução.
 
 ---
 
-# Licença
+## Aviso
 
-Projeto desenvolvido para fins educacionais, de estudo e portfólio.
+Este projeto possui finalidade educacional e de portfólio.
+
+Os dados utilizados no ambiente de demonstração são fictícios.
+
+A aplicação não deve ser utilizada em produção para armazenamento de informações reais de pacientes sem a implementação de controles adicionais de segurança, privacidade, auditoria, backup e conformidade com a legislação aplicável.
 
 ---
 
-## ClinicPTF 2.0
+## Autor
 
-Uma reconstrução arquitetural do ClinicPTF, buscando transformar um projeto inicial em uma aplicação mais organizada, testável e preparada para evolução.
+**Alisson Voltolini**
 
-```text
-ClinicPTF 1.0
-      ↓
-Reconstrução arquitetural
-      ↓
-ClinicPTF 2.0
-      ↓
-Arquitetura em camadas
-      ↓
-Testes + CI
-      ↓
-Demo + Deploy
-```
+Estudante de Desenvolvimento de Sistemas e desenvolvedor em formação, com foco em desenvolvimento web, Python, Java, JavaScript, bancos de dados e construção de aplicações para portfólio profissional.
+
+---
+
+## Licença
+
+Este projeto está em desenvolvimento para fins educacionais e de portfólio.
