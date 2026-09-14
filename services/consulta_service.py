@@ -142,6 +142,38 @@ def listar_consultas(
         .all()
     )
 
+def listar_consultas_do_paciente(
+    db: Session,
+    paciente_id: int,
+    incluir_canceladas: bool = True,
+) -> list[Consulta]:
+    """
+    Lista o histórico de consultas de um paciente.
+    """
+
+    query = (
+        db.query(Consulta)
+        .options(
+            joinedload(Consulta.paciente),
+            joinedload(Consulta.profissional),
+        )
+        .filter(
+            Consulta.paciente_id == paciente_id
+        )
+    )
+
+    if not incluir_canceladas:
+        query = query.filter(
+            Consulta.status != "cancelada"
+        )
+
+    return (
+        query
+        .order_by(
+            Consulta.data_hora.desc()
+        )
+        .all()
+    )
 
 def listar_consultas_do_dia(
     db: Session,

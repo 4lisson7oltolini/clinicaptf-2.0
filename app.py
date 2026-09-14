@@ -186,14 +186,19 @@ pagina_agenda = st.Page(
     icon="📅",
 )
 
+# ---------------------------------------------------------
+# Navegação
+# ---------------------------------------------------------
 
 navegacao = st.navigation(
-    [
-        pagina_inicio,
-        pagina_pacientes,
-        pagina_profissionais,
-        pagina_agenda,
-    ]
+    {
+        "Principal": [
+            pagina_inicio,
+            pagina_pacientes,
+            pagina_profissionais,
+            pagina_agenda,
+        ],
+    },
 )
 
 
