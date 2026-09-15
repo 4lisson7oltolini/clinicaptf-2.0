@@ -1,6 +1,10 @@
 import streamlit as st
 from database.connection import SessionLocal
 from services.paciente_service import listar_pacientes
+from services.profissional_service import (
+    listar_profissionais,
+)
+
 from services.consulta_service import (
     listar_consultas_do_paciente,
     buscar_consulta_por_id,
@@ -10,7 +14,6 @@ from services.consulta_service import (
 
 from components.paciente_form import formulario_novo_paciente
 from utils.auth_guard import exigir_login
-
 
 # ---------------------------------------------------------
 # Autenticação
@@ -78,7 +81,7 @@ st.divider()
 
 
 # ---------------------------------------------------------
-# Buscar pacientes
+# Buscar pacientes e profissionais
 # ---------------------------------------------------------
 
 db = SessionLocal()
@@ -86,6 +89,8 @@ db = SessionLocal()
 try:
 
     pacientes = listar_pacientes(db)
+
+    profissionais = listar_profissionais(db)
 
 finally:
 
@@ -118,26 +123,6 @@ paciente_selecionado = st.selectbox(
         f"{paciente.nome} — CPF: {paciente.cpf}"
     ),
 )
-
-
-# ---------------------------------------------------------
-# Carregar histórico do paciente
-# ---------------------------------------------------------
-
-db = SessionLocal()
-
-try:
-
-    consultas = listar_consultas_do_paciente(
-        db,
-        paciente_id=paciente_selecionado.id,
-        incluir_canceladas=True,
-    )
-
-finally:
-
-    db.close()
-
 
 # ---------------------------------------------------------
 # Identificação do paciente
@@ -214,7 +199,138 @@ with aba_historico:
 
 
     # -----------------------------------------------------
-    # Resumo das consultas
+    # Filtros
+    # -----------------------------------------------------
+
+    st.markdown(
+        "**Filtros do histórico**"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        data_inicio = st.date_input(
+            "Data inicial",
+            value=None,
+            key="historico_data_inicio",
+        )
+
+    with col2:
+
+        data_fim = st.date_input(
+            "Data final",
+            value=None,
+            key="historico_data_fim",
+        )
+
+
+    col1, col2 = st.columns(2)
+
+
+    with col1:
+
+        profissionais_opcoes = [
+            None
+        ] + profissionais
+
+        profissional_filtro = st.selectbox(
+            "Profissional",
+            profissionais_opcoes,
+            format_func=lambda profissional: (
+                "Todos os profissionais"
+                if profissional is None
+                else (
+                    f"{profissional.nome} — "
+                    f"{profissional.especialidade}"
+                )
+            ),
+            key="historico_profissional",
+        )
+
+
+    with col2:
+
+        status_opcoes = [
+            None,
+            "agendada",
+            "confirmada",
+            "concluida",
+            "cancelada",
+        ]
+
+        status_nomes = {
+            None: "Todos os status",
+            "agendada": "Agendada",
+            "confirmada": "Confirmada",
+            "concluida": "Concluída",
+            "cancelada": "Cancelada",
+        }
+
+        status_filtro = st.selectbox(
+            "Status",
+            status_opcoes,
+            format_func=lambda status: (
+                status_nomes[status]
+            ),
+            key="historico_status",
+        )
+
+
+    # -----------------------------------------------------
+    # Validar período
+    # -----------------------------------------------------
+
+    periodo_invalido = (
+        data_inicio is not None
+        and data_fim is not None
+        and data_inicio > data_fim
+    )
+
+
+    if periodo_invalido:
+
+        st.error(
+            "A data inicial não pode ser posterior "
+            "à data final."
+        )
+
+        consultas = []
+
+    else:
+
+        # -------------------------------------------------
+        # Carregar histórico filtrado
+        # -------------------------------------------------
+
+        db = SessionLocal()
+
+        try:
+
+            consultas = listar_consultas_do_paciente(
+                db,
+                paciente_id=paciente_selecionado.id,
+                incluir_canceladas=True,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                profissional_id=(
+                    profissional_filtro.id
+                    if profissional_filtro is not None
+                    else None
+                ),
+                status=status_filtro,
+            )
+
+        finally:
+
+            db.close()
+
+
+    st.divider()
+
+
+    # -----------------------------------------------------
+    # Resumo das consultas filtradas
     # -----------------------------------------------------
 
     total_consultas = len(
@@ -278,6 +394,7 @@ with aba_historico:
         consulta_id = st.session_state[
             "consulta_selecionada"
         ]
+
 
         db = SessionLocal()
 
@@ -480,12 +597,14 @@ with aba_historico:
                 ).index(
                     consulta_detalhe.status
                 ),
+                key=f"status_consulta_{consulta_detalhe.id}",
             )
 
 
             if st.button(
                 "Salvar status",
                 use_container_width=True,
+                key=f"salvar_status_{consulta_detalhe.id}",
             ):
 
                 db = SessionLocal()
@@ -531,6 +650,7 @@ with aba_historico:
                 if st.button(
                     "Cancelar consulta",
                     use_container_width=True,
+                    key=f"cancelar_consulta_{consulta_detalhe.id}",
                 ):
 
                     db = SessionLocal()
@@ -567,7 +687,8 @@ with aba_historico:
         if not consultas:
 
             st.info(
-                "Este paciente ainda não possui consultas."
+                "Nenhuma consulta encontrada "
+                "com os filtros selecionados."
             )
 
 
@@ -592,21 +713,15 @@ with aba_historico:
                 # Nome do status
                 # -----------------------------------------
 
-                if consulta.status == "agendada":
-
-                    status = "Agendada"
-
-                elif consulta.status == "confirmada":
-
-                    status = "Confirmada"
-
-                elif consulta.status == "concluida":
-
-                    status = "Concluída"
-
-                else:
-
-                    status = "Cancelada"
+                status = {
+                    "agendada": "Agendada",
+                    "confirmada": "Confirmada",
+                    "concluida": "Concluída",
+                    "cancelada": "Cancelada",
+                }.get(
+                    consulta.status,
+                    consulta.status,
+                )
 
 
                 # -----------------------------------------
