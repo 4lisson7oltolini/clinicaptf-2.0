@@ -34,15 +34,10 @@ st.markdown(
     """
     <style>
 
-    /* Espaçamento geral */
-
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
     }
-
-
-    /* Título */
 
     .agenda-subtitle {
         color: #9CA3AF;
@@ -50,9 +45,6 @@ st.markdown(
         margin-top: -12px;
         margin-bottom: 25px;
     }
-
-
-    /* Card */
 
     .consulta-card {
         padding: 20px;
@@ -62,17 +54,11 @@ st.markdown(
         margin-bottom: 12px;
     }
 
-
-    /* Horário */
-
     .consulta-horario {
         font-size: 1.55rem;
         font-weight: 700;
         margin-bottom: 5px;
     }
-
-
-    /* Paciente */
 
     .consulta-paciente {
         font-size: 1.05rem;
@@ -80,16 +66,10 @@ st.markdown(
         margin-bottom: 3px;
     }
 
-
-    /* Profissional */
-
     .consulta-profissional {
         color: #9CA3AF;
         font-size: 0.9rem;
     }
-
-
-    /* Status */
 
     .status {
         display: inline-block;
@@ -99,32 +79,25 @@ st.markdown(
         font-weight: 600;
     }
 
-
     .status-agendada {
         background-color: rgba(59,130,246,0.15);
         color: #60A5FA;
     }
-
 
     .status-confirmada {
         background-color: rgba(34,197,94,0.15);
         color: #4ADE80;
     }
 
-
     .status-concluida {
         background-color: rgba(168,85,247,0.15);
         color: #C084FC;
     }
 
-
     .status-cancelada {
         background-color: rgba(239,68,68,0.15);
         color: #F87171;
     }
-
-
-    /* Separador */
 
     .agenda-section {
         margin-top: 25px;
@@ -145,8 +118,8 @@ st.title("Agenda")
 
 st.markdown(
     '<div class="agenda-subtitle">'
-    'Gerenciamento de consultas da Clínica PTF 2.0'
-    '</div>',
+    "Gerenciamento de consultas da Clínica PTF 2.0"
+    "</div>",
     unsafe_allow_html=True,
 )
 
@@ -224,6 +197,7 @@ try:
     )
 
 finally:
+
     db.close()
 
 
@@ -233,8 +207,8 @@ finally:
 
 st.markdown(
     '<div class="agenda-section">'
-    '<h3>Nova consulta</h3>'
-    '</div>',
+    "<h3>Nova consulta</h3>"
+    "</div>",
     unsafe_allow_html=True,
 )
 
@@ -344,11 +318,20 @@ else:
 
         except ConflitoDeHorarioError as erro:
 
-            st.error(str(erro))
+            st.error(
+                str(erro)
+            )
+
+        except StatusConsultaInvalidoError as erro:
+
+            st.error(
+                str(erro)
+            )
 
         finally:
 
             db.close()
+
 
 # ---------------------------------------------------------
 # Lista de consultas
@@ -356,14 +339,16 @@ else:
 
 st.markdown(
     '<div class="agenda-section">'
-    '<h3>Consultas do dia</h3>'
-    '</div>',
+    "<h3>Consultas do dia</h3>"
+    "</div>",
     unsafe_allow_html=True,
 )
 
 
 st.caption(
-    data_filtro.strftime("%A, %d de %B de %Y").capitalize()
+    data_filtro.strftime(
+        "%A, %d de %B de %Y"
+    ).capitalize()
 )
 
 
@@ -429,8 +414,8 @@ else:
 
                 st.markdown(
                     f'<div class="consulta-horario">'
-                    f'{horario}'
-                    f'</div>',
+                    f"{horario}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -445,15 +430,15 @@ else:
 
                 st.markdown(
                     f'<div class="consulta-paciente">'
-                    f'{consulta.paciente.nome}'
-                    f'</div>',
+                    f"{consulta.paciente.nome}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 
                 st.markdown(
                     f'<div class="consulta-profissional">'
-                    f'{consulta.profissional.nome}'
-                    f'</div>',
+                    f"{consulta.profissional.nome}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -476,8 +461,8 @@ else:
 
                 st.markdown(
                     f'<span class="status {status_class}">'
-                    f'{status_label}'
-                    f'</span>',
+                    f"{status_label}"
+                    f"</span>",
                     unsafe_allow_html=True,
                 )
 
@@ -499,6 +484,10 @@ else:
             )
 
 
+            # -------------------------------------------------
+            # Confirmar consulta
+            # -------------------------------------------------
+
             if status == "agendada":
 
                 with col1:
@@ -519,16 +508,26 @@ else:
                                 "confirmada",
                             )
 
+                            st.success(
+                                "Consulta confirmada com sucesso."
+                            )
+
                             st.rerun()
 
                         except StatusConsultaInvalidoError as erro:
 
-                            st.error(str(erro))
+                            st.error(
+                                str(erro)
+                            )
 
                         finally:
 
                             db.close()
 
+
+            # -------------------------------------------------
+            # Concluir consulta
+            # -------------------------------------------------
 
             elif status == "confirmada":
 
@@ -550,16 +549,26 @@ else:
                                 "concluida",
                             )
 
+                            st.success(
+                                "Consulta concluída com sucesso."
+                            )
+
                             st.rerun()
 
                         except StatusConsultaInvalidoError as erro:
 
-                            st.error(str(erro))
+                            st.error(
+                                str(erro)
+                            )
 
                         finally:
 
                             db.close()
 
+
+            # -------------------------------------------------
+            # Cancelar consulta
+            # -------------------------------------------------
 
             with col2:
 
@@ -578,7 +587,17 @@ else:
                             consulta.id,
                         )
 
+                        st.success(
+                            "Consulta cancelada com sucesso."
+                        )
+
                         st.rerun()
+
+                    except StatusConsultaInvalidoError as erro:
+
+                        st.error(
+                            str(erro)
+                        )
 
                     finally:
 

@@ -1,6 +1,12 @@
 from datetime import datetime, timedelta, date, time
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
+
 from models.consulta import Consulta
+from models.paciente import Paciente
+from models.profissional import Profissional
+
 
 # ---------------------------------------------------------
 # Configurações
@@ -21,11 +27,38 @@ STATUS_VALIDOS = {
 # ---------------------------------------------------------
 
 class ConflitoDeHorarioError(Exception):
+    """Profissional já possui consulta no horário informado."""
     pass
 
 
 class StatusConsultaInvalidoError(Exception):
+    """Status informado não é válido."""
     pass
+
+
+class DadosConsultaInvalidosError(ValueError):
+    """Dados informados para a consulta são inválidos."""
+    pass
+
+
+# ---------------------------------------------------------
+# Validação de IDs
+# ---------------------------------------------------------
+
+def _validar_id(valor: int, nome: str) -> None:
+    """
+    Valida um ID antes de utilizá-lo em operações do domínio.
+    """
+
+    if not isinstance(valor, int) or isinstance(valor, bool):
+        raise DadosConsultaInvalidosError(
+            f"{nome} deve ser um número inteiro."
+        )
+
+    if valor <= 0:
+        raise DadosConsultaInvalidosError(
+            f"{nome} deve ser maior que zero."
+        )
 
 
 # ---------------------------------------------------------
@@ -59,7 +92,6 @@ def _profissional_ocupado(
     )
 
     if ignorar_id is not None:
-
         query = query.filter(
             Consulta.id != ignorar_id
         )
@@ -82,18 +114,64 @@ def agendar_consulta(
 ) -> Consulta:
     """
     Cria uma nova consulta.
+
+    Antes de salvar:
+    - valida os IDs;
+    - verifica se o paciente existe;
+    - verifica se o profissional existe;
+    - verifica conflito de horário;
+    - trata erros de integridade do banco.
     """
+
+    _validar_id(
+        paciente_id,
+        "ID do paciente",
+    )
+
+    _validar_id(
+        profissional_id,
+        "ID do profissional",
+    )
+
+    if not isinstance(data_hora, datetime):
+        raise DadosConsultaInvalidosError(
+            "A data e hora da consulta são inválidas."
+        )
+
+    paciente = (
+        db.query(Paciente)
+        .filter(
+            Paciente.id == paciente_id
+        )
+        .first()
+    )
+
+    if paciente is None:
+        raise DadosConsultaInvalidosError(
+            "Paciente não encontrado."
+        )
+
+    profissional = (
+        db.query(Profissional)
+        .filter(
+            Profissional.id == profissional_id
+        )
+        .first()
+    )
+
+    if profissional is None:
+        raise DadosConsultaInvalidosError(
+            "Profissional não encontrado."
+        )
 
     if _profissional_ocupado(
         db,
         profissional_id,
         data_hora,
     ):
-
         raise ConflitoDeHorarioError(
             "O profissional já possui uma consulta próxima desse horário."
         )
-
 
     consulta = Consulta(
         paciente_id=paciente_id,
@@ -103,12 +181,18 @@ def agendar_consulta(
         status="agendada",
     )
 
-
     db.add(consulta)
 
-    db.commit()
+    try:
+        db.commit()
+        db.refresh(consulta)
 
-    db.refresh(consulta)
+    except IntegrityError:
+        db.rollback()
+
+        raise DadosConsultaInvalidosError(
+            "Não foi possível criar a consulta."
+        )
 
     return consulta
 
@@ -123,9 +207,6 @@ def listar_consultas(
     dia: date | None = None,
     incluir_canceladas: bool = True,
 ) -> list[Consulta]:
-    """
-    Lista consultas com filtros opcionais.
-    """
 
     query = (
         db.query(Consulta)
@@ -135,21 +216,11 @@ def listar_consultas(
         )
     )
 
-
-    # -----------------------------------------------------
-    # Filtro por profissional
-    # -----------------------------------------------------
-
     if profissional_id is not None:
 
         query = query.filter(
             Consulta.profissional_id == profissional_id
         )
-
-
-    # -----------------------------------------------------
-    # Filtro por dia
-    # -----------------------------------------------------
 
     if dia is not None:
 
@@ -168,17 +239,11 @@ def listar_consultas(
             Consulta.data_hora <= fim,
         )
 
-
-    # -----------------------------------------------------
-    # Filtro de canceladas
-    # -----------------------------------------------------
-
     if not incluir_canceladas:
 
         query = query.filter(
             Consulta.status != "cancelada"
         )
-
 
     return (
         query
@@ -202,17 +267,6 @@ def listar_consultas_do_paciente(
     profissional_id: int | None = None,
     status: str | None = None,
 ) -> list[Consulta]:
-    """
-    Lista o histórico de consultas de um paciente.
-
-    Permite filtrar por:
-
-    - período inicial;
-    - período final;
-    - profissional;
-    - status;
-    - consultas canceladas.
-    """
 
     query = (
         db.query(Consulta)
@@ -225,11 +279,6 @@ def listar_consultas_do_paciente(
         )
     )
 
-
-    # -----------------------------------------------------
-    # Data inicial
-    # -----------------------------------------------------
-
     if data_inicio is not None:
 
         inicio = datetime.combine(
@@ -240,11 +289,6 @@ def listar_consultas_do_paciente(
         query = query.filter(
             Consulta.data_hora >= inicio
         )
-
-
-    # -----------------------------------------------------
-    # Data final
-    # -----------------------------------------------------
 
     if data_fim is not None:
 
@@ -257,21 +301,11 @@ def listar_consultas_do_paciente(
             Consulta.data_hora <= fim
         )
 
-
-    # -----------------------------------------------------
-    # Profissional
-    # -----------------------------------------------------
-
     if profissional_id is not None:
 
         query = query.filter(
             Consulta.profissional_id == profissional_id
         )
-
-
-    # -----------------------------------------------------
-    # Status
-    # -----------------------------------------------------
 
     if status is not None:
 
@@ -285,21 +319,11 @@ def listar_consultas_do_paciente(
             Consulta.status == status
         )
 
-
-    # -----------------------------------------------------
-    # Canceladas
-    # -----------------------------------------------------
-
     if not incluir_canceladas:
 
         query = query.filter(
             Consulta.status != "cancelada"
         )
-
-
-    # -----------------------------------------------------
-    # Resultado
-    # -----------------------------------------------------
 
     return (
         query
@@ -318,9 +342,6 @@ def listar_consultas_do_dia(
     db: Session,
     dia: date | None = None,
 ) -> list[Consulta]:
-    """
-    Retorna as consultas não canceladas de um determinado dia.
-    """
 
     dia = dia or date.today()
 
@@ -339,13 +360,15 @@ def buscar_consulta_por_id(
     db: Session,
     consulta_id: int,
 ) -> Consulta | None:
-    """
-    Busca uma consulta pelo ID.
 
-    Os relacionamentos paciente e profissional são
-    carregados antecipadamente para evitar problemas
-    com sessões encerradas.
-    """
+    if not isinstance(consulta_id, int):
+        return None
+
+    if isinstance(consulta_id, bool):
+        return None
+
+    if consulta_id <= 0:
+        return None
 
     return (
         db.query(Consulta)
@@ -369,9 +392,6 @@ def atualizar_status(
     consulta_id: int,
     novo_status: str,
 ) -> Consulta | None:
-    """
-    Atualiza o status de uma consulta.
-    """
 
     if novo_status not in STATUS_VALIDOS:
 
@@ -379,23 +399,26 @@ def atualizar_status(
             f"Status inválido: {novo_status}"
         )
 
-
     consulta = buscar_consulta_por_id(
         db,
         consulta_id,
     )
 
-
     if not consulta:
-
         return None
-
 
     consulta.status = novo_status
 
-    db.commit()
+    try:
+        db.commit()
+        db.refresh(consulta)
 
-    db.refresh(consulta)
+    except IntegrityError:
+        db.rollback()
+
+        raise DadosConsultaInvalidosError(
+            "Não foi possível atualizar o status da consulta."
+        )
 
     return consulta
 
@@ -408,9 +431,6 @@ def cancelar_consulta(
     db: Session,
     consulta_id: int,
 ) -> Consulta | None:
-    """
-    Cancela uma consulta.
-    """
 
     return atualizar_status(
         db,
@@ -426,9 +446,6 @@ def cancelar_consulta(
 def contar_consultas_ativas(
     db: Session,
 ) -> int:
-    """
-    Conta todas as consultas que não foram canceladas.
-    """
 
     return (
         db.query(Consulta)
@@ -447,10 +464,15 @@ def profissional_ocupado_agora(
     db: Session,
     profissional_id: int,
 ) -> bool:
-    """
-    Verifica se o profissional está ocupado
-    no horário atual.
-    """
+
+    if not isinstance(profissional_id, int):
+        return False
+
+    if isinstance(profissional_id, bool):
+        return False
+
+    if profissional_id <= 0:
+        return False
 
     return _profissional_ocupado(
         db,

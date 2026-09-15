@@ -3,7 +3,7 @@ import streamlit as st
 from database.connection import SessionLocal
 from database.initialization import inicializar_aplicacao
 from services.auth_service import autenticar
-
+from utils.auth_guard import encerrar_sessao
 
 # ---------------------------------------------------------
 # Inicialização
@@ -153,7 +153,7 @@ with st.sidebar:
         "Sair",
         use_container_width=True,
     ):
-        st.session_state["usuario"] = None
+        encerrar_sessao()
         st.rerun()
 
 

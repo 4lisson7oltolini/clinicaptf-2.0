@@ -1,4 +1,5 @@
 import pytest
+
 from services.profissional_service import (
     criar_profissional,
     listar_profissionais,
@@ -7,6 +8,11 @@ from services.profissional_service import (
     ProfissionalJaExisteError,
     DadosProfissionalInvalidosError,
 )
+
+
+# ---------------------------------------------------------
+# Criação de profissionais
+# ---------------------------------------------------------
 
 
 def test_criar_profissional_com_sucesso(db_session):
@@ -45,6 +51,11 @@ def test_criar_profissional_com_doutora(db_session):
     assert profissional.nome == "Dra. Maria"
 
 
+# ---------------------------------------------------------
+# Duplicidade
+# ---------------------------------------------------------
+
+
 def test_nao_permite_registro_profissional_duplicado(db_session):
     criar_profissional(
         db_session,
@@ -60,6 +71,11 @@ def test_nao_permite_registro_profissional_duplicado(db_session):
             especialidade="Fisioterapia",
             registro_profissional="CREFITO-12345",
         )
+
+
+# ---------------------------------------------------------
+# Validação de dados
+# ---------------------------------------------------------
 
 
 def test_rejeita_nome_profissional_invalido(db_session):
@@ -122,6 +138,11 @@ def test_rejeita_registro_profissional_muito_curto(db_session):
         )
 
 
+# ---------------------------------------------------------
+# Listagem
+# ---------------------------------------------------------
+
+
 def test_lista_profissionais_em_ordem_alfabetica(db_session):
     criar_profissional(
         db_session,
@@ -178,6 +199,11 @@ def test_lista_profissionais_com_filtro_por_nome(db_session):
     assert profissionais[0].nome == "Dr. Carlos"
 
 
+# ---------------------------------------------------------
+# Busca por ID
+# ---------------------------------------------------------
+
+
 def test_busca_profissional_por_id(db_session):
     profissional = criar_profissional(
         db_session,
@@ -203,6 +229,11 @@ def test_busca_profissional_inexistente(db_session):
     )
 
     assert profissional is None
+
+
+# ---------------------------------------------------------
+# Remoção
+# ---------------------------------------------------------
 
 
 def test_remove_profissional_com_sucesso(db_session):
@@ -235,3 +266,106 @@ def test_remover_profissional_inexistente(db_session):
     )
 
     assert resultado is False
+
+
+# ---------------------------------------------------------
+# Segurança de IDs
+# ---------------------------------------------------------
+
+
+def test_busca_profissional_com_id_zero_retorna_none(db_session):
+    resultado = buscar_profissional_por_id(
+        db_session,
+        0,
+    )
+
+    assert resultado is None
+
+
+def test_busca_profissional_com_id_negativo_retorna_none(db_session):
+    resultado = buscar_profissional_por_id(
+        db_session,
+        -1,
+    )
+
+    assert resultado is None
+
+
+def test_busca_profissional_com_id_invalido_retorna_none(db_session):
+    resultado = buscar_profissional_por_id(
+        db_session,
+        "1",
+    )
+
+    assert resultado is None
+
+
+def test_remover_profissional_com_id_invalido_retorna_false(
+    db_session,
+):
+    resultado = remover_profissional(
+        db_session,
+        -1,
+    )
+
+    assert resultado is False
+
+
+def test_remover_profissional_com_id_string_retorna_false(
+    db_session,
+):
+    resultado = remover_profissional(
+        db_session,
+        "1",
+    )
+
+    assert resultado is False
+
+
+# ---------------------------------------------------------
+# Segurança da busca
+# ---------------------------------------------------------
+
+
+def test_busca_profissional_ignora_espacos_externos(
+    db_session,
+):
+    criar_profissional(
+        db_session,
+        nome="Dr. João",
+        especialidade="Fisioterapia",
+        registro_profissional="CREFITO-12345",
+    )
+
+    profissionais = listar_profissionais(
+        db_session,
+        termo_busca="  João  ",
+    )
+
+    assert len(profissionais) == 1
+    assert profissionais[0].nome == "Dr. João"
+
+
+def test_busca_profissional_com_termo_vazio_retorna_todos(
+    db_session,
+):
+    criar_profissional(
+        db_session,
+        nome="Dr. Carlos",
+        especialidade="Fisioterapia",
+        registro_profissional="CREFITO-11111",
+    )
+
+    criar_profissional(
+        db_session,
+        nome="Dr. João",
+        especialidade="Fisioterapia",
+        registro_profissional="CREFITO-22222",
+    )
+
+    profissionais = listar_profissionais(
+        db_session,
+        termo_busca="   ",
+    )
+
+    assert len(profissionais) == 2
