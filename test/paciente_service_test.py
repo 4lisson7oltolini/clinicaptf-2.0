@@ -33,7 +33,7 @@ def test_rejeita_cep_invalido(db_session):
     with pytest.raises(ValueError):
         criar_paciente(
             db_session,
-            nome="Fulano",
+            nome="Fulano da Silva",
             cpf="11144477735",
             cep="123"
         )
