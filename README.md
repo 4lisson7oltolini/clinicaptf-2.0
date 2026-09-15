@@ -10,7 +10,7 @@ A versão 2.0 foi reconstruída com foco em organização de código, segurança
 
 ## Sobre o projeto
 
-O **ClinicPTF 2.0** é um sistema de gerenciamento de clínica desenvolvido como projeto de estudo e portfólio, com foco em práticas utilizadas no desenvolvimento de aplicações reais.
+O **ClínicaPTF 2.0** é um sistema de gerenciamento de clínica desenvolvido como projeto de estudo e portfólio, com foco em práticas utilizadas no desenvolvimento de aplicações reais.
 
 O sistema permite gerenciar:
 
