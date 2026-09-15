@@ -110,3 +110,87 @@ def test_remover_paciente_inexistente_retorna_false(db_session):
     resultado = remover_paciente(db_session, 9999)
 
     assert resultado is False
+
+def test_busca_paciente_com_id_zero_retorna_none(db_session):
+    resultado = buscar_por_id(
+        db_session,
+        0,
+    )
+
+    assert resultado is None
+
+
+def test_busca_paciente_com_id_negativo_retorna_none(db_session):
+    resultado = buscar_por_id(
+        db_session,
+        -1,
+    )
+
+    assert resultado is None
+
+
+def test_busca_paciente_com_id_invalido_retorna_none(db_session):
+    resultado = buscar_por_id(
+        db_session,
+        "1",
+    )
+
+    assert resultado is None
+
+
+def test_remover_paciente_com_id_invalido_retorna_false(db_session):
+    resultado = remover_paciente(
+        db_session,
+        -1,
+    )
+
+    assert resultado is False
+
+
+def test_remover_paciente_com_id_string_retorna_false(db_session):
+    resultado = remover_paciente(
+        db_session,
+        "1",
+    )
+
+    assert resultado is False
+
+
+def test_busca_por_nome_ignora_espacos_externos(db_session):
+    criar_paciente(
+        db_session,
+        nome="Maria Silva",
+        cpf="11144477735",
+        cep="01311000",
+    )
+
+    pacientes = listar_pacientes(
+        db_session,
+        termo_busca="  Maria  ",
+    )
+
+    assert len(pacientes) == 1
+    assert pacientes[0].nome == "Maria Silva"
+
+
+def test_busca_vazia_retorna_todos_os_pacientes(db_session):
+    criar_paciente(
+        db_session,
+        nome="Maria Silva",
+        cpf="11144477735",
+        cep="01311000",
+    )
+
+    criar_paciente(
+        db_session,
+        nome="João Souza",
+        cpf="52998224725",
+        cep="20000000",
+    )
+
+    pacientes = listar_pacientes(
+        db_session,
+        termo_busca="   ",
+    )
+
+    assert len(pacientes) == 2

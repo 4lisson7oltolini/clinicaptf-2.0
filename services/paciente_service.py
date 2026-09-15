@@ -2,13 +2,26 @@
 Camada de serviço: regras de negócio de Paciente.
 
 Esta camada é independente da interface Streamlit.
-As validações são executadas aqui para garantir que
-qualquer chamada ao serviço respeite as regras do domínio.
+
+Responsabilidades:
+- validar dados de pacientes;
+- normalizar dados;
+- criar pacientes;
+- listar pacientes;
+- buscar pacientes;
+- remover pacientes;
+- tratar erros de integridade do banco.
+
+As regras de negócio ficam centralizadas aqui para que
+também sejam aplicadas quando o serviço for utilizado
+fora da interface Streamlit.
 """
 
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from models.paciente import Paciente
+
 from utils.validators import (
     limpar_cpf,
     limpar_cep,
@@ -24,17 +37,23 @@ from utils.validators import (
 # Exceções
 # ---------------------------------------------------------
 
+
 class PacienteJaExisteError(Exception):
+    """Paciente já cadastrado."""
+
     pass
 
 
 class DadosPacienteInvalidosError(ValueError):
+    """Dados fornecidos para o paciente são inválidos."""
+
     pass
 
 
 # ---------------------------------------------------------
 # Criar paciente
 # ---------------------------------------------------------
+
 
 def criar_paciente(
     db: Session,
@@ -47,37 +66,42 @@ def criar_paciente(
     Cria um novo paciente.
 
     Antes de salvar no banco:
+
     - normaliza CPF, CEP e telefone;
     - valida o nome;
     - valida CPF;
     - valida CEP;
     - valida telefone;
-    - trata CPF duplicado.
+    - trata CPF duplicado;
+    - executa rollback quando necessário.
+
+    Raises:
+        DadosPacienteInvalidosError:
+            Quando algum dado fornecido é inválido.
+
+        PacienteJaExisteError:
+            Quando já existe um paciente com o CPF informado.
     """
 
     # -----------------------------------------------------
     # Normalização
     # -----------------------------------------------------
 
-    nome = (
-        nome or ""
-    ).strip()
+    nome = (nome or "").strip()
 
-    cpf = limpar_cpf(
-        cpf
+    cpf = limpar_cpf(cpf)
+
+    cep = limpar_cep(cep)
+
+    telefone = (
+        limpar_telefone(telefone)
+        if telefone
+        else None
     )
-
-    cep = limpar_cep(
-        cep
-    )
-
-    telefone = limpar_telefone(
-        telefone
-    ) if telefone else None
 
 
     # -----------------------------------------------------
-    # Validar nome
+    # Validação do nome
     # -----------------------------------------------------
 
     if not validar_nome(nome):
@@ -88,7 +112,7 @@ def criar_paciente(
 
 
     # -----------------------------------------------------
-    # Validar CPF
+    # Validação do CPF
     # -----------------------------------------------------
 
     if not validar_cpf(cpf):
@@ -99,7 +123,7 @@ def criar_paciente(
 
 
     # -----------------------------------------------------
-    # Validar CEP
+    # Validação do CEP
     # -----------------------------------------------------
 
     if not validar_cep(cep):
@@ -110,12 +134,10 @@ def criar_paciente(
 
 
     # -----------------------------------------------------
-    # Validar telefone
+    # Validação do telefone
     # -----------------------------------------------------
 
-    if telefone and not validar_telefone(
-        telefone
-    ):
+    if telefone and not validar_telefone(telefone):
 
         raise DadosPacienteInvalidosError(
             "Telefone inválido."
@@ -133,29 +155,25 @@ def criar_paciente(
         telefone=telefone,
     )
 
-    db.add(
-        paciente
-    )
+    db.add(paciente)
 
 
     # -----------------------------------------------------
-    # Salvar
+    # Persistência
     # -----------------------------------------------------
 
     try:
 
         db.commit()
 
-        db.refresh(
-            paciente
-        )
+        db.refresh(paciente)
 
     except IntegrityError:
 
         db.rollback()
 
         raise PacienteJaExisteError(
-            f"Já existe paciente com CPF {cpf}"
+            f"Já existe paciente com CPF {cpf}."
         )
 
 
@@ -166,20 +184,28 @@ def criar_paciente(
 # Listar pacientes
 # ---------------------------------------------------------
 
+
 def listar_pacientes(
     db: Session,
     termo_busca: str | None = None,
 ) -> list[Paciente]:
     """
-    Lista pacientes.
+    Lista pacientes ordenados pelo nome.
 
     Quando termo_busca é informado,
     pesquisa pelo nome.
+
+    Termos vazios ou compostos apenas por espaços
+    são tratados como ausência de filtro.
     """
 
-    query = db.query(
-        Paciente
+    termo_busca = (
+        termo_busca.strip()
+        if termo_busca
+        else None
     )
+
+    query = db.query(Paciente)
 
 
     if termo_busca:
@@ -204,13 +230,26 @@ def listar_pacientes(
 # Buscar paciente por ID
 # ---------------------------------------------------------
 
+
 def buscar_por_id(
     db: Session,
     paciente_id: int,
 ) -> Paciente | None:
     """
     Busca um paciente pelo ID.
+
+    IDs inválidos retornam None em vez de executar
+    uma consulta desnecessária ao banco.
     """
+
+    if not isinstance(paciente_id, int):
+
+        return None
+
+    if paciente_id <= 0:
+
+        return None
+
 
     return (
         db.query(Paciente)
@@ -225,6 +264,7 @@ def buscar_por_id(
 # Remover paciente
 # ---------------------------------------------------------
 
+
 def remover_paciente(
     db: Session,
     paciente_id: int,
@@ -233,8 +273,14 @@ def remover_paciente(
     Remove um paciente pelo ID.
 
     Retorna:
-        True  -> paciente removido
-        False -> paciente não encontrado
+        True:
+            paciente removido.
+
+        False:
+            paciente não encontrado ou ID inválido.
+
+    O rollback é executado quando ocorre uma falha
+    de integridade durante a exclusão.
     """
 
     paciente = buscar_por_id(
@@ -248,10 +294,18 @@ def remover_paciente(
         return False
 
 
-    db.delete(
-        paciente
-    )
+    db.delete(paciente)
 
-    db.commit()
+
+    try:
+
+        db.commit()
+
+    except IntegrityError:
+
+        db.rollback()
+
+        return False
+
 
     return True
