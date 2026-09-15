@@ -798,3 +798,226 @@ def test_busca_consulta_com_boolean_retorna_none(
     )
 
     assert resultado is None
+
+    # ---------------------------------------------------------
+# Transições de status
+# ---------------------------------------------------------
+
+def test_consulta_agendada_pode_ser_confirmada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    resultado = atualizar_status(
+        db_session,
+        consulta.id,
+        "confirmada",
+    )
+
+    assert resultado.status == "confirmada"
+
+
+def test_consulta_agendada_pode_ser_cancelada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    resultado = atualizar_status(
+        db_session,
+        consulta.id,
+        "cancelada",
+    )
+
+    assert resultado.status == "cancelada"
+
+
+def test_consulta_confirmada_pode_ser_concluida(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "confirmada",
+    )
+
+    resultado = atualizar_status(
+        db_session,
+        consulta.id,
+        "concluida",
+    )
+
+    assert resultado.status == "concluida"
+
+
+def test_consulta_confirmada_pode_ser_cancelada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "confirmada",
+    )
+
+    resultado = atualizar_status(
+        db_session,
+        consulta.id,
+        "cancelada",
+    )
+
+    assert resultado.status == "cancelada"
+
+
+def test_consulta_cancelada_nao_pode_ser_confirmada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "cancelada",
+    )
+
+    with pytest.raises(ValueError):
+        atualizar_status(
+            db_session,
+            consulta.id,
+            "confirmada",
+        )
+
+
+def test_consulta_cancelada_nao_pode_ser_concluida(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "cancelada",
+    )
+
+    with pytest.raises(ValueError):
+        atualizar_status(
+            db_session,
+            consulta.id,
+            "concluida",
+        )
+
+
+def test_consulta_concluida_nao_pode_voltar_para_agendada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "confirmada",
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "concluida",
+    )
+
+    with pytest.raises(ValueError):
+        atualizar_status(
+            db_session,
+            consulta.id,
+            "agendada",
+        )
+
+
+def test_consulta_concluida_nao_pode_ser_cancelada(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "confirmada",
+    )
+
+    atualizar_status(
+        db_session,
+        consulta.id,
+        "concluida",
+    )
+
+    with pytest.raises(ValueError):
+        atualizar_status(
+            db_session,
+            consulta.id,
+            "cancelada",
+        )
