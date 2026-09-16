@@ -19,16 +19,8 @@ from services.consulta_service import (
 from utils.auth_guard import exigir_login
 
 
-# ---------------------------------------------------------
-# Autenticação
-# ---------------------------------------------------------
-
 exigir_login()
 
-
-# ---------------------------------------------------------
-# Configuração visual
-# ---------------------------------------------------------
 
 st.markdown(
     """
@@ -110,10 +102,6 @@ st.markdown(
 )
 
 
-# ---------------------------------------------------------
-# Cabeçalho
-# ---------------------------------------------------------
-
 st.title("Agenda")
 
 st.markdown(
@@ -123,10 +111,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ---------------------------------------------------------
-# Carregamento de dados
-# ---------------------------------------------------------
 
 db = SessionLocal()
 
@@ -138,13 +122,11 @@ finally:
     db.close()
 
 
-# ---------------------------------------------------------
-# Filtros
-# ---------------------------------------------------------
-
 st.markdown("### Filtros da agenda")
 
+
 col1, col2, col3 = st.columns([1.2, 2, 1])
+
 
 with col1:
 
@@ -177,10 +159,6 @@ with col3:
     )
 
 
-# ---------------------------------------------------------
-# Consultas filtradas
-# ---------------------------------------------------------
-
 db = SessionLocal()
 
 try:
@@ -192,7 +170,7 @@ try:
             if profissional_filtro
             else None
         ),
-        dia=data_filtro,
+        data=data_filtro,
         incluir_canceladas=incluir_canceladas,
     )
 
@@ -200,10 +178,6 @@ finally:
 
     db.close()
 
-
-# ---------------------------------------------------------
-# Nova consulta
-# ---------------------------------------------------------
 
 st.markdown(
     '<div class="agenda-section">'
@@ -333,10 +307,6 @@ else:
             db.close()
 
 
-# ---------------------------------------------------------
-# Lista de consultas
-# ---------------------------------------------------------
-
 st.markdown(
     '<div class="agenda-section">'
     "<h3>Consultas do dia</h3>"
@@ -368,7 +338,6 @@ else:
 
         status = consulta.status
 
-
         if status == "agendada":
 
             status_label = "Agendada"
@@ -389,11 +358,6 @@ else:
             status_label = "Cancelada"
             status_class = "status-cancelada"
 
-
-        # -------------------------------------------------
-        # Card da consulta
-        # -------------------------------------------------
-
         with st.container():
 
             st.markdown(
@@ -405,11 +369,6 @@ else:
                 [1, 4, 1.5]
             )
 
-
-            # -------------------------------------------------
-            # Horário
-            # -------------------------------------------------
-
             with col_hora:
 
                 st.markdown(
@@ -420,11 +379,6 @@ else:
                 )
 
                 st.caption("50 min")
-
-
-            # -------------------------------------------------
-            # Informações
-            # -------------------------------------------------
 
             with col_info:
 
@@ -452,11 +406,6 @@ else:
                         f"Observações: {consulta.observacoes}"
                     )
 
-
-            # -------------------------------------------------
-            # Status
-            # -------------------------------------------------
-
             with col_status:
 
                 st.markdown(
@@ -466,27 +415,16 @@ else:
                     unsafe_allow_html=True,
                 )
 
-
             st.markdown(
                 "</div>",
                 unsafe_allow_html=True,
             )
-
-
-        # -------------------------------------------------
-        # Ações
-        # -------------------------------------------------
 
         if status != "cancelada":
 
             col1, col2, col3, col4 = st.columns(
                 [1, 1, 1, 3]
             )
-
-
-            # -------------------------------------------------
-            # Confirmar consulta
-            # -------------------------------------------------
 
             if status == "agendada":
 
@@ -524,11 +462,6 @@ else:
 
                             db.close()
 
-
-            # -------------------------------------------------
-            # Concluir consulta
-            # -------------------------------------------------
-
             elif status == "confirmada":
 
                 with col1:
@@ -564,11 +497,6 @@ else:
                         finally:
 
                             db.close()
-
-
-            # -------------------------------------------------
-            # Cancelar consulta
-            # -------------------------------------------------
 
             with col2:
 

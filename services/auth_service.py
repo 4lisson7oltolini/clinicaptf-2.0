@@ -15,7 +15,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from models.usuario import Usuario
+from models.usuario import Usuario, PERFIS_VALIDOS
 
 from utils.validators import validar_texto_obrigatorio
 
@@ -51,6 +51,7 @@ def criar_usuario(
     username: str,
     senha: str,
     nome_completo: str,
+    perfil: str = "profissional",
 ) -> Usuario:
     """
     Cria um usuário com senha protegida por hash bcrypt.
@@ -61,6 +62,12 @@ def criar_usuario(
     username = _normalizar_username(username)
     senha = senha or ""
     nome_completo = (nome_completo or "").strip()
+    perfil = (perfil or "").strip().lower()
+
+    if perfil not in PERFIS_VALIDOS:
+        raise DadosUsuarioInvalidosError(
+            f"Perfil inválido. Use um dos seguintes: {', '.join(PERFIS_VALIDOS)}"
+        )
 
     if not validar_texto_obrigatorio(
         username,
@@ -90,6 +97,7 @@ def criar_usuario(
         username=username,
         senha_hash=pwd_context.hash(senha),
         nome_completo=nome_completo,
+        perfil=perfil,
     )
 
     db.add(usuario)
