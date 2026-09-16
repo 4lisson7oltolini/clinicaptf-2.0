@@ -1,6 +1,9 @@
 import streamlit as st
+
 from database.connection import SessionLocal
+
 from services.paciente_service import listar_pacientes
+
 from services.profissional_service import (
     listar_profissionais,
 )
@@ -13,26 +16,16 @@ from services.consulta_service import (
 )
 
 from components.paciente_form import formulario_novo_paciente
+
 from utils.auth_guard import exigir_login
 
-# ---------------------------------------------------------
-# Autenticação
-# ---------------------------------------------------------
 
 exigir_login()
 
 
-# ---------------------------------------------------------
-# Estado da página
-# ---------------------------------------------------------
-
 if "consulta_selecionada" not in st.session_state:
     st.session_state["consulta_selecionada"] = None
 
-
-# ---------------------------------------------------------
-# Configuração visual
-# ---------------------------------------------------------
 
 st.markdown(
     """
@@ -52,20 +45,12 @@ st.markdown(
 )
 
 
-# ---------------------------------------------------------
-# Cabeçalho
-# ---------------------------------------------------------
-
 st.title("Pacientes")
 
 st.caption(
     "Cadastro, informações e histórico dos pacientes"
 )
 
-
-# ---------------------------------------------------------
-# Novo paciente
-# ---------------------------------------------------------
 
 with st.expander(
     "Cadastrar novo paciente",
@@ -80,10 +65,6 @@ with st.expander(
 st.divider()
 
 
-# ---------------------------------------------------------
-# Buscar pacientes e profissionais
-# ---------------------------------------------------------
-
 db = SessionLocal()
 
 try:
@@ -97,10 +78,6 @@ finally:
     db.close()
 
 
-# ---------------------------------------------------------
-# Nenhum paciente
-# ---------------------------------------------------------
-
 if not pacientes:
 
     st.info(
@@ -110,11 +87,8 @@ if not pacientes:
     st.stop()
 
 
-# ---------------------------------------------------------
-# Seleção do paciente
-# ---------------------------------------------------------
-
 st.subheader("Paciente")
+
 
 paciente_selecionado = st.selectbox(
     "Selecione um paciente",
@@ -124,9 +98,6 @@ paciente_selecionado = st.selectbox(
     ),
 )
 
-# ---------------------------------------------------------
-# Identificação do paciente
-# ---------------------------------------------------------
 
 st.subheader(
     paciente_selecionado.nome
@@ -137,10 +108,6 @@ st.caption(
 )
 
 
-# ---------------------------------------------------------
-# Abas
-# ---------------------------------------------------------
-
 aba_dados, aba_historico = st.tabs(
     [
         "Dados cadastrais",
@@ -148,10 +115,6 @@ aba_dados, aba_historico = st.tabs(
     ]
 )
 
-
-# =========================================================
-# ABA — DADOS CADASTRAIS
-# =========================================================
 
 with aba_dados:
 
@@ -187,10 +150,6 @@ with aba_dados:
         )
 
 
-# =========================================================
-# ABA — HISTÓRICO DE CONSULTAS
-# =========================================================
-
 with aba_historico:
 
     st.subheader(
@@ -198,15 +157,13 @@ with aba_historico:
     )
 
 
-    # -----------------------------------------------------
-    # Filtros
-    # -----------------------------------------------------
-
     st.markdown(
         "**Filtros do histórico**"
     )
 
+
     col1, col2 = st.columns(2)
+
 
     with col1:
 
@@ -215,6 +172,7 @@ with aba_historico:
             value=None,
             key="historico_data_inicio",
         )
+
 
     with col2:
 
@@ -277,10 +235,6 @@ with aba_historico:
         )
 
 
-    # -----------------------------------------------------
-    # Validar período
-    # -----------------------------------------------------
-
     periodo_invalido = (
         data_inicio is not None
         and data_fim is not None
@@ -297,11 +251,8 @@ with aba_historico:
 
         consultas = []
 
-    else:
 
-        # -------------------------------------------------
-        # Carregar histórico filtrado
-        # -------------------------------------------------
+    else:
 
         db = SessionLocal()
 
@@ -310,14 +261,8 @@ with aba_historico:
             consultas = listar_consultas_do_paciente(
                 db,
                 paciente_id=paciente_selecionado.id,
-                incluir_canceladas=True,
                 data_inicio=data_inicio,
                 data_fim=data_fim,
-                profissional_id=(
-                    profissional_filtro.id
-                    if profissional_filtro is not None
-                    else None
-                ),
                 status=status_filtro,
             )
 
@@ -326,22 +271,30 @@ with aba_historico:
             db.close()
 
 
+        if profissional_filtro is not None:
+
+            consultas = [
+                consulta
+                for consulta in consultas
+                if consulta.profissional_id
+                == profissional_filtro.id
+            ]
+
+
     st.divider()
 
-
-    # -----------------------------------------------------
-    # Resumo das consultas filtradas
-    # -----------------------------------------------------
 
     total_consultas = len(
         consultas
     )
+
 
     consultas_concluidas = sum(
         1
         for consulta in consultas
         if consulta.status == "concluida"
     )
+
 
     consultas_agendadas = sum(
         1
@@ -352,6 +305,7 @@ with aba_historico:
         }
     )
 
+
     consultas_canceladas = sum(
         1
         for consulta in consultas
@@ -361,20 +315,24 @@ with aba_historico:
 
     col1, col2, col3, col4 = st.columns(4)
 
+
     col1.metric(
         "Total",
         total_consultas,
     )
+
 
     col2.metric(
         "Concluídas",
         consultas_concluidas,
     )
 
+
     col3.metric(
         "Agendadas",
         consultas_agendadas,
     )
+
 
     col4.metric(
         "Canceladas",
@@ -384,10 +342,6 @@ with aba_historico:
 
     st.divider()
 
-
-    # =====================================================
-    # DETALHES DA CONSULTA
-    # =====================================================
 
     if st.session_state["consulta_selecionada"] is not None:
 
@@ -434,10 +388,6 @@ with aba_historico:
             )
 
 
-            # -------------------------------------------------
-            # Botão voltar
-            # -------------------------------------------------
-
             if st.button(
                 "Voltar para o histórico",
                 use_container_width=True,
@@ -452,10 +402,6 @@ with aba_historico:
 
             st.divider()
 
-
-            # -------------------------------------------------
-            # Informações principais
-            # -------------------------------------------------
 
             col1, col2 = st.columns(2)
 
@@ -493,10 +439,6 @@ with aba_historico:
 
             st.divider()
 
-
-            # -------------------------------------------------
-            # Data, horário e status
-            # -------------------------------------------------
 
             col1, col2, col3 = st.columns(3)
 
@@ -542,10 +484,6 @@ with aba_historico:
             st.divider()
 
 
-            # -------------------------------------------------
-            # Observações
-            # -------------------------------------------------
-
             st.subheader(
                 "Observações"
             )
@@ -566,10 +504,6 @@ with aba_historico:
 
             st.divider()
 
-
-            # -------------------------------------------------
-            # Gerenciar consulta
-            # -------------------------------------------------
 
             st.subheader(
                 "Gerenciar consulta"
@@ -629,10 +563,6 @@ with aba_historico:
                 st.rerun()
 
 
-            # -------------------------------------------------
-            # Cancelar consulta
-            # -------------------------------------------------
-
             if consulta_detalhe.status != "cancelada":
 
                 st.divider()
@@ -674,15 +604,7 @@ with aba_historico:
                     st.rerun()
 
 
-    # =====================================================
-    # LISTA DO HISTÓRICO
-    # =====================================================
-
     else:
-
-        # -------------------------------------------------
-        # Histórico vazio
-        # -------------------------------------------------
 
         if not consultas:
 
@@ -691,10 +613,6 @@ with aba_historico:
                 "com os filtros selecionados."
             )
 
-
-        # -------------------------------------------------
-        # Histórico
-        # -------------------------------------------------
 
         else:
 
@@ -709,10 +627,6 @@ with aba_historico:
                 )
 
 
-                # -----------------------------------------
-                # Nome do status
-                # -----------------------------------------
-
                 status = {
                     "agendada": "Agendada",
                     "confirmada": "Confirmada",
@@ -724,10 +638,6 @@ with aba_historico:
                 )
 
 
-                # -----------------------------------------
-                # Card da consulta
-                # -----------------------------------------
-
                 with st.container(
                     border=True
                 ):
@@ -736,10 +646,6 @@ with aba_historico:
                         [1.2, 3, 1.5]
                     )
 
-
-                    # -------------------------------------
-                    # Data e horário
-                    # -------------------------------------
 
                     with col1:
 
@@ -751,10 +657,6 @@ with aba_historico:
                             f"Horário: {horario}"
                         )
 
-
-                    # -------------------------------------
-                    # Profissional
-                    # -------------------------------------
 
                     with col2:
 
@@ -773,10 +675,6 @@ with aba_historico:
                                 f"{consulta.observacoes}"
                             )
 
-
-                    # -------------------------------------
-                    # Status
-                    # -------------------------------------
 
                     with col3:
 
@@ -809,10 +707,6 @@ with aba_historico:
                                 status
                             )
 
-
-                        # ---------------------------------
-                        # Abrir consulta
-                        # ---------------------------------
 
                         if st.button(
                             "Abrir consulta",

@@ -13,7 +13,6 @@ inicializar_aplicacao()
 
 st.set_page_config(
     page_title="Clínica PTF 2.0",
-    page_icon="🩺",
     layout="wide",
 )
 
@@ -103,6 +102,7 @@ def tela_login():
                 st.session_state["usuario"] = {
                     "id": usuario.id,
                     "nome": usuario.nome_completo,
+                    "perfil": usuario.perfil,
                 }
 
                 st.rerun()
@@ -111,6 +111,8 @@ def tela_login():
                 st.error(
                     "Usuário ou senha inválidos."
                 )
+
+
 # ---------------------------------------------------------
 # Controle da tela de login
 # ---------------------------------------------------------
@@ -143,8 +145,14 @@ if st.session_state["usuario"] is None:
 
 with st.sidebar:
 
+    usuario = st.session_state["usuario"]
+
     st.markdown(
-        f"**Usuário:** {st.session_state['usuario']['nome']}"
+        f"**Usuário:** {usuario['nome']}"
+    )
+
+    st.caption(
+        f"Perfil: {usuario['perfil'].capitalize()}"
     )
 
     st.divider()
@@ -164,27 +172,24 @@ with st.sidebar:
 pagina_inicio = st.Page(
     "pages/0_Inicio.py",
     title="Início",
-    icon="🏠",
     default=True,
 )
 
 pagina_pacientes = st.Page(
     "pages/1_Pacientes.py",
     title="Pacientes",
-    icon="👤",
 )
 
 pagina_profissionais = st.Page(
     "pages/2_Profissionais.py",
     title="Profissionais",
-    icon="🩺",
 )
 
 pagina_agenda = st.Page(
     "pages/3_Agenda.py",
     title="Agenda",
-    icon="📅",
 )
+
 
 # ---------------------------------------------------------
 # Navegação
