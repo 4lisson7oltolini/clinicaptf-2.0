@@ -14,6 +14,7 @@ from database.connection import Base
 PERFIS_VALIDOS = {
     "admin",
     "profissional",
+    "atendente",
 }
 
 

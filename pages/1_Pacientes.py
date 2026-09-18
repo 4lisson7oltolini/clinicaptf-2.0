@@ -18,9 +18,11 @@ from services.consulta_service import (
 from components.paciente_form import formulario_novo_paciente
 
 from utils.auth_guard import exigir_login
+from utils.permissions import exigir_perfil
 
 
 exigir_login()
+exigir_perfil("admin", "atendente")
 
 
 if "consulta_selecionada" not in st.session_state:

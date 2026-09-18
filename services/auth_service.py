@@ -116,6 +116,42 @@ def criar_usuario(
     return usuario
 
 
+def listar_usuarios(db: Session) -> list[Usuario]:
+    """Lista usuários cadastrados em ordem alfabética."""
+
+    return (
+        db.query(Usuario)
+        .order_by(Usuario.nome_completo)
+        .all()
+    )
+
+
+def remover_usuario(
+    db: Session,
+    usuario_id: int,
+    usuario_atual_id: int | None = None,
+) -> bool:
+    """Remove uma conta, preservando a conta atualmente autenticada."""
+
+    if usuario_id == usuario_atual_id:
+        raise DadosUsuarioInvalidosError(
+            "Não é possível remover o usuário atualmente autenticado."
+        )
+
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+
+    if usuario is None:
+        return False
+
+    if usuario.profissional is not None:
+        usuario.profissional.usuario_id = None
+
+    db.delete(usuario)
+    db.commit()
+
+    return True
+
+
 def autenticar(
     db: Session,
     username: str,

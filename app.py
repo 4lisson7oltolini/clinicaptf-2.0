@@ -3,6 +3,10 @@ import streamlit as st
 from database.connection import SessionLocal
 from database.initialization import inicializar_aplicacao
 from services.auth_service import autenticar
+from utils.accessibility import (
+    aplicar_estilos_acessibilidade,
+    inicializar_preferencias,
+)
 from utils.auth_guard import encerrar_sessao
 
 
@@ -11,6 +15,7 @@ from utils.auth_guard import encerrar_sessao
 # =========================================================
 
 inicializar_aplicacao()
+inicializar_preferencias()
 
 st.set_page_config(
     page_title="Clínica PTF 2.0",
@@ -33,6 +38,8 @@ st.markdown(
        ===================================================== */
 
     :root {
+        color-scheme: light;
+
         --ptf-primary: #117C73;
         --ptf-primary-dark: #0D6861;
         --ptf-primary-light: #E7F4F2;
@@ -403,6 +410,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+aplicar_estilos_acessibilidade()
+
 
 # =========================================================
 # Estado da sessão
@@ -499,6 +508,12 @@ def tela_login():
                 senha,
             )
 
+            profissional_id = (
+                usuario.profissional.id
+                if usuario and usuario.profissional
+                else None
+            )
+
         finally:
 
             db.close()
@@ -509,6 +524,7 @@ def tela_login():
                 "id": usuario.id,
                 "nome": usuario.nome_completo,
                 "perfil": usuario.perfil,
+                "profissional_id": profissional_id,
             }
 
             st.rerun()
@@ -556,60 +572,7 @@ usuario = st.session_state["usuario"]
 
 
 # =========================================================
-# Sidebar
-# =========================================================
-
-with st.sidebar:
-
-    # Mesma correção: sem linhas em branco entre as <div> aninhadas.
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 10px 0 25px 0;">
-            <div style="font-size: 34px; margin-bottom: 6px;">
-                🩺
-            </div>
-            <div style="font-size: 1.15rem; font-weight: 700;">
-                Clínica PTF 2.0
-            </div>
-            <div style="font-size: 0.75rem; opacity: 0.75;">
-                Sistema de Gestão
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-
-    # Mesma correção aqui também — era o segundo bloco quebrado na sua tela.
-    st.markdown(
-        f"""
-        <div class="ptf-user-box">
-            <div class="ptf-user-name">
-                {usuario["nome"]}
-            </div>
-            <div class="ptf-user-profile">
-                Perfil: {usuario["perfil"].capitalize()}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-
-    if st.button(
-        "Sair",
-        use_container_width=True,
-    ):
-
-        encerrar_sessao()
-
-        st.rerun()
-
-
-# =========================================================
-# Navegação
+# Páginas
 # =========================================================
 
 pagina_inicio = st.Page(
@@ -641,20 +604,89 @@ pagina_agenda = st.Page(
 )
 
 
-# =========================================================
-# Navegação
-# =========================================================
+pagina_configuracoes = st.Page(
+    "pages/5_Configuracoes.py",
+    title="Configurações",
+    icon="⚙️",
+)
+
+
+paginas_principais = [pagina_inicio, pagina_agenda, pagina_configuracoes]
+
+if usuario["perfil"] in {"admin", "atendente"}:
+    paginas_principais.insert(1, pagina_pacientes)
+
+if usuario["perfil"] == "admin":
+    paginas_principais.insert(2, pagina_profissionais)
 
 navegacao = st.navigation(
-    {
-        "Principal": [
-            pagina_inicio,
-            pagina_pacientes,
-            pagina_profissionais,
-            pagina_agenda,
-        ],
-    },
+    {"Principal": paginas_principais},
+    position="hidden",
 )
+
+
+# =========================================================
+# Sidebar
+# =========================================================
+
+with st.sidebar:
+
+    # Mesma correção: sem linhas em branco entre as <div> aninhadas.
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 10px 0 25px 0;">
+            <div style="font-size: 34px; margin-bottom: 6px;">
+                🩺
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 700;">
+                Clínica PTF 2.0
+            </div>
+            <div style="font-size: 0.75rem; opacity: 0.75;">
+                Sistema de Gestão
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+
+    st.markdown("**Principal**")
+
+    st.page_link(pagina_inicio, label="Início", icon="🏠")
+    if usuario["perfil"] in {"admin", "atendente"}:
+        st.page_link(pagina_pacientes, label="Pacientes", icon="👤")
+    if usuario["perfil"] == "admin":
+        st.page_link(pagina_profissionais, label="Profissionais", icon="🩺")
+    st.page_link(pagina_agenda, label="Agenda", icon="📅")
+    st.page_link(pagina_configuracoes, label="Configurações", icon="⚙️")
+
+    st.divider()
+
+    st.markdown(
+        f"""
+        <div class="ptf-user-box">
+            <div class="ptf-user-name">
+                {usuario["nome"]}
+            </div>
+            <div class="ptf-user-profile">
+                Perfil: {usuario["perfil"].capitalize()}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+
+    if st.button(
+        "Sair",
+        use_container_width=True,
+    ):
+
+        encerrar_sessao()
+
+        st.rerun()
 
 
 # =========================================================

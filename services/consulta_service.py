@@ -190,10 +190,21 @@ def listar_consultas(
     dia: datetime | date | None = None,
     status: str | None = None,
     incluir_canceladas: bool = True,
+    data: datetime | date | None = None,
 ) -> list[Consulta]:
     """
     Lista consultas aplicando filtros opcionais.
+
+    ``data`` é mantido como alias compatível para o filtro ``dia``.
     """
+
+    if dia is not None and data is not None:
+        raise DadosConsultaInvalidosError(
+            "Informe apenas dia ou data, não os dois."
+        )
+
+    if data is not None:
+        dia = data
 
     query = db.query(Consulta).options(
         joinedload(Consulta.paciente),
