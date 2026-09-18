@@ -13,7 +13,13 @@ if __name__ == "__main__":
     nome_completo = input("Nome completo: ").strip()
 
     try:
-        criar_usuario(db, username=username, senha=senha, nome_completo=nome_completo)
+        criar_usuario(
+            db,
+            username=username,
+            senha=senha,
+            nome_completo=nome_completo,
+            perfil="admin",
+        )
         print(f"Usuário '{username}' criado com sucesso.")
     except UsuarioJaExisteError as erro:
         print(f"Erro: {erro}")

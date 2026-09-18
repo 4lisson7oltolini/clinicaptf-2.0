@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -38,6 +38,10 @@ class DadosConsultaInvalidosError(ValueError):
 
 
 def _validar_id(valor: int, nome: str) -> int:
+    """
+    Valida IDs utilizados nas operações de consulta.
+    """
+
     if isinstance(valor, bool) or not isinstance(valor, int):
         raise DadosConsultaInvalidosError(
             f"{nome} deve ser um número inteiro."
@@ -57,6 +61,13 @@ def _profissional_ocupado(
     data_hora: datetime,
     consulta_id: int | None = None,
 ) -> bool:
+    """
+    Verifica se o profissional possui uma consulta conflitante.
+
+    A duração padrão de uma consulta é de 50 minutos.
+    Consultas canceladas não bloqueiam o horário.
+    """
+
     inicio = data_hora
     fim = data_hora + timedelta(
         minutes=DURACAO_PADRAO_MINUTOS
@@ -73,25 +84,16 @@ def _profissional_ocupado(
 
     for consulta in consultas:
 
-        if (
-            consulta_id is not None
-            and consulta.id == consulta_id
-        ):
+        if consulta_id is not None and consulta.id == consulta_id:
             continue
 
         inicio_existente = consulta.data_hora
-
         fim_existente = (
             consulta.data_hora
-            + timedelta(
-                minutes=DURACAO_PADRAO_MINUTOS
-            )
+            + timedelta(minutes=DURACAO_PADRAO_MINUTOS)
         )
 
-        if (
-            inicio < fim_existente
-            and fim > inicio_existente
-        ):
+        if inicio < fim_existente and fim > inicio_existente:
             return True
 
     return False
@@ -105,6 +107,10 @@ def agendar_consulta(
     status: str = "agendada",
     observacoes: str | None = None,
 ) -> Consulta:
+    """
+    Agenda uma nova consulta.
+    """
+
     paciente_id = _validar_id(
         paciente_id,
         "paciente_id",
@@ -138,16 +144,13 @@ def agendar_consulta(
 
     profissional = (
         db.query(Profissional)
-        .filter(
-            Profissional.id == profissional_id
-        )
+        .filter(Profissional.id == profissional_id)
         .first()
     )
 
     if profissional is None:
         raise DadosConsultaInvalidosError(
-            f"Profissional com ID {profissional_id} "
-            "não encontrado."
+            f"Profissional com ID {profissional_id} não encontrado."
         )
 
     if _profissional_ocupado(
@@ -156,8 +159,7 @@ def agendar_consulta(
         data_hora,
     ):
         raise ConflitoDeHorarioError(
-            "O profissional já possui uma consulta "
-            "nesse período."
+            "O profissional já possui uma consulta nesse período."
         )
 
     consulta = Consulta(
@@ -173,10 +175,8 @@ def agendar_consulta(
     try:
         db.commit()
         db.refresh(consulta)
-
     except IntegrityError:
         db.rollback()
-
         raise DadosConsultaInvalidosError(
             "Não foi possível cadastrar a consulta."
         )
@@ -187,52 +187,59 @@ def agendar_consulta(
 def listar_consultas(
     db: Session,
     profissional_id: int | None = None,
-    data: datetime | date | None = None,
+    dia: datetime | date | None = None,
     status: str | None = None,
     incluir_canceladas: bool = True,
+    data: datetime | date | None = None,
 ) -> list[Consulta]:
-    query = (
-        db.query(Consulta)
-        .options(
-            joinedload(Consulta.paciente),
-            joinedload(Consulta.profissional),
+    """
+    Lista consultas aplicando filtros opcionais.
+
+    ``data`` é mantido como alias compatível para o filtro ``dia``.
+    """
+
+    if dia is not None and data is not None:
+        raise DadosConsultaInvalidosError(
+            "Informe apenas dia ou data, não os dois."
         )
+
+    if data is not None:
+        dia = data
+
+    query = db.query(Consulta).options(
+        joinedload(Consulta.paciente),
+        joinedload(Consulta.profissional),
     )
 
     if profissional_id is not None:
-
         profissional_id = _validar_id(
             profissional_id,
             "profissional_id",
         )
 
         query = query.filter(
-            Consulta.profissional_id
-            == profissional_id
+            Consulta.profissional_id == profissional_id
         )
 
-    if data is not None:
+    if dia is not None:
 
-        if isinstance(data, datetime):
-
-            inicio = data.replace(
+        if isinstance(dia, datetime):
+            inicio = dia.replace(
                 hour=0,
                 minute=0,
                 second=0,
                 microsecond=0,
             )
 
-        elif isinstance(data, date):
-
+        elif isinstance(dia, date):
             inicio = datetime.combine(
-                data,
+                dia,
                 datetime.min.time(),
             )
 
         else:
-
             raise DadosConsultaInvalidosError(
-                "data deve ser um objeto date ou datetime."
+                "dia deve ser um objeto date ou datetime."
             )
 
         fim = inicio + timedelta(days=1)
@@ -254,7 +261,6 @@ def listar_consultas(
         )
 
     elif not incluir_canceladas:
-
         query = query.filter(
             Consulta.status != "cancelada"
         )
@@ -270,7 +276,17 @@ def listar_consultas_do_paciente(
     status: str | None = None,
     data_inicio: datetime | date | None = None,
     data_fim: datetime | date | None = None,
+    profissional_id: int | None = None,
+    incluir_canceladas: bool = True,
 ) -> list[Consulta]:
+    """
+    Lista o histórico de consultas de um paciente.
+
+    Aceita tanto datetime quanto date nos filtros. Por padrão inclui
+    consultas canceladas no histórico; use incluir_canceladas=False
+    para escondê-las.
+    """
+
     paciente_id = _validar_id(
         paciente_id,
         "paciente_id",
@@ -287,6 +303,16 @@ def listar_consultas_do_paciente(
         )
     )
 
+    if profissional_id is not None:
+        query = query.filter(
+            Consulta.profissional_id == profissional_id
+        )
+
+    if not incluir_canceladas:
+        query = query.filter(
+            Consulta.status != "cancelada"
+        )
+
     if status is not None:
 
         if status not in STATUS_VALIDOS:
@@ -301,21 +327,17 @@ def listar_consultas_do_paciente(
     if data_inicio is not None:
 
         if isinstance(data_inicio, datetime):
-
             inicio = data_inicio
 
         elif isinstance(data_inicio, date):
-
             inicio = datetime.combine(
                 data_inicio,
                 datetime.min.time(),
             )
 
         else:
-
             raise DadosConsultaInvalidosError(
-                "data_inicio deve ser um objeto "
-                "date ou datetime."
+                "data_inicio deve ser um objeto date ou datetime."
             )
 
         query = query.filter(
@@ -325,21 +347,17 @@ def listar_consultas_do_paciente(
     if data_fim is not None:
 
         if isinstance(data_fim, datetime):
-
             fim = data_fim
 
         elif isinstance(data_fim, date):
-
             fim = datetime.combine(
                 data_fim,
                 datetime.max.time(),
             )
 
         else:
-
             raise DadosConsultaInvalidosError(
-                "data_fim deve ser um objeto "
-                "date ou datetime."
+                "data_fim deve ser um objeto date ou datetime."
             )
 
         query = query.filter(
@@ -353,11 +371,16 @@ def listar_consultas_do_paciente(
 
 def listar_consultas_do_dia(
     db: Session,
-    dia: date | datetime,
+    dia: date | datetime | None = None,
 ) -> list[Consulta]:
+    """
+    Lista todas as consultas de um determinado dia (hoje, por padrão).
+    """
+
+    if dia is None:
+        dia = date.today()
 
     if isinstance(dia, datetime):
-
         inicio = dia.replace(
             hour=0,
             minute=0,
@@ -366,14 +389,12 @@ def listar_consultas_do_dia(
         )
 
     elif isinstance(dia, date):
-
         inicio = datetime.combine(
             dia,
             datetime.min.time(),
         )
 
     else:
-
         raise DadosConsultaInvalidosError(
             "dia deve ser um objeto date ou datetime."
         )
@@ -401,6 +422,11 @@ def buscar_consulta_por_id(
     db: Session,
     consulta_id: int,
 ) -> Consulta | None:
+    """
+    Busca uma consulta pelo ID.
+
+    IDs inválidos retornam None.
+    """
 
     if (
         isinstance(consulta_id, bool)
@@ -415,9 +441,7 @@ def buscar_consulta_por_id(
             joinedload(Consulta.paciente),
             joinedload(Consulta.profissional),
         )
-        .filter(
-            Consulta.id == consulta_id
-        )
+        .filter(Consulta.id == consulta_id)
         .first()
     )
 
@@ -427,6 +451,22 @@ def atualizar_status(
     consulta_id: int,
     novo_status: str,
 ) -> Consulta | None:
+    """
+    Atualiza o status de uma consulta respeitando
+    as transições permitidas pela regra de negócio.
+
+    Transições permitidas:
+
+        agendada -> confirmada
+        agendada -> cancelada
+
+        confirmada -> concluida
+        confirmada -> cancelada
+
+        concluida -> nenhuma
+
+        cancelada -> nenhuma
+    """
 
     consulta_id = _validar_id(
         consulta_id,
@@ -458,19 +498,15 @@ def atualizar_status(
     if novo_status not in status_permitidos:
         raise ValueError(
             f"Não é permitido alterar uma consulta "
-            f"de '{status_atual}' para "
-            f"'{novo_status}'."
+            f"de '{status_atual}' para '{novo_status}'."
         )
 
     consulta.status = novo_status
 
     try:
-
         db.commit()
         db.refresh(consulta)
-
     except IntegrityError:
-
         db.rollback()
         raise
 
@@ -481,6 +517,10 @@ def cancelar_consulta(
     db: Session,
     consulta_id: int,
 ) -> Consulta | None:
+    """
+    Cancela uma consulta respeitando as regras
+    de transição de status.
+    """
 
     return atualizar_status(
         db,
@@ -493,12 +533,12 @@ def contar_consultas_ativas(
     db: Session,
     profissional_id: int | None = None,
 ) -> int:
+    """
+    Conta consultas que não estão canceladas.
+    """
 
-    query = (
-        db.query(Consulta)
-        .filter(
-            Consulta.status != "cancelada"
-        )
+    query = db.query(Consulta).filter(
+        Consulta.status != "cancelada"
     )
 
     if profissional_id is not None:
@@ -509,8 +549,7 @@ def contar_consultas_ativas(
         )
 
         query = query.filter(
-            Consulta.profissional_id
-            == profissional_id
+            Consulta.profissional_id == profissional_id
         )
 
     return query.count()
@@ -521,6 +560,13 @@ def profissional_ocupado_agora(
     profissional_id: int,
     agora: datetime | None = None,
 ) -> bool:
+    """
+    Verifica se o profissional possui uma consulta
+    ativa no horário informado.
+
+    Uma consulta ocupa um período de 50 minutos
+    a partir do seu horário de início.
+    """
 
     profissional_id = _validar_id(
         profissional_id,
@@ -535,11 +581,32 @@ def profissional_ocupado_agora(
             "agora deve ser um objeto datetime."
         )
 
+    fim = agora + timedelta(
+        minutes=DURACAO_PADRAO_MINUTOS
+    )
+
+    consulta = (
+        db.query(Consulta)
+        .filter(
+            Consulta.profissional_id == profissional_id,
+            Consulta.status != "cancelada",
+            Consulta.data_hora <= agora,
+            Consulta.data_hora + timedelta(
+                minutes=DURACAO_PADRAO_MINUTOS
+            ) > agora,
+        )
+        .first()
+    )
+
+    if consulta is not None:
+        return True
+
+    # Compatibilidade com bancos/SQLite onde a expressão
+    # de datetime acima pode não ser traduzida corretamente.
     consultas = (
         db.query(Consulta)
         .filter(
-            Consulta.profissional_id
-            == profissional_id,
+            Consulta.profissional_id == profissional_id,
             Consulta.status != "cancelada",
         )
         .all()
@@ -548,12 +615,9 @@ def profissional_ocupado_agora(
     for consulta in consultas:
 
         inicio = consulta.data_hora
-
         termino = (
             inicio
-            + timedelta(
-                minutes=DURACAO_PADRAO_MINUTOS
-            )
+            + timedelta(minutes=DURACAO_PADRAO_MINUTOS)
         )
 
         if inicio <= agora < termino:

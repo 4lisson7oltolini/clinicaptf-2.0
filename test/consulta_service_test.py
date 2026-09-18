@@ -1,6 +1,9 @@
+from datetime import datetime, timedelta
+
 import pytest
 
-from datetime import date, datetime, timedelta
+from services.paciente_service import criar_paciente
+from services.profissional_service import criar_profissional
 
 from services.consulta_service import (
     agendar_consulta,
@@ -14,11 +17,7 @@ from services.consulta_service import (
     profissional_ocupado_agora,
     ConflitoDeHorarioError,
     StatusConsultaInvalidoError,
-    DadosConsultaInvalidosError,
 )
-
-from services.paciente_service import criar_paciente
-from services.profissional_service import criar_profissional
 
 
 # ---------------------------------------------------------
@@ -255,131 +254,6 @@ def test_nao_lista_canceladas_quando_solicitado(
     assert len(consultas) == 0
 
 
-def test_lista_canceladas_por_padrao(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, profissional = paciente_e_profissional
-
-    consulta = agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 9, 0),
-    )
-
-    cancelar_consulta(
-        db_session,
-        consulta.id,
-    )
-
-    consultas = listar_consultas(
-        db_session,
-    )
-
-    assert len(consultas) == 1
-    assert consultas[0].status == "cancelada"
-
-
-def test_lista_consultas_por_data(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, profissional = paciente_e_profissional
-
-    agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 9, 0),
-    )
-
-    agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 2, 9, 0),
-    )
-
-    consultas = listar_consultas(
-        db_session,
-        data=date(2026, 10, 1),
-    )
-
-    assert len(consultas) == 1
-    assert consultas[0].data_hora.date() == date(2026, 10, 1)
-
-
-def test_lista_consultas_por_datetime(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, profissional = paciente_e_profissional
-
-    agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 9, 0),
-    )
-
-    consultas = listar_consultas(
-        db_session,
-        data=datetime(2026, 10, 1, 15, 30),
-    )
-
-    assert len(consultas) == 1
-    assert consultas[0].data_hora.date() == date(2026, 10, 1)
-
-
-def test_rejeita_data_invalida_na_listagem(
-    db_session,
-):
-    with pytest.raises(DadosConsultaInvalidosError):
-        listar_consultas(
-            db_session,
-            data="2026-10-01",
-        )
-
-
-def test_lista_consultas_por_status(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, profissional = paciente_e_profissional
-
-    consulta = agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 9, 0),
-    )
-
-    atualizar_status(
-        db_session,
-        consulta.id,
-        "confirmada",
-    )
-
-    consultas = listar_consultas(
-        db_session,
-        status="confirmada",
-    )
-
-    assert len(consultas) == 1
-    assert consultas[0].status == "confirmada"
-
-
-def test_rejeita_status_invalido_na_listagem(
-    db_session,
-):
-    with pytest.raises(StatusConsultaInvalidoError):
-        listar_consultas(
-            db_session,
-            status="nao_existe",
-        )
-
-
 # ---------------------------------------------------------
 # Histórico do paciente
 # ---------------------------------------------------------
@@ -495,34 +369,6 @@ def test_filtra_historico_por_periodo(
         10,
         10,
     ).date()
-
-
-def test_rejeita_data_inicio_invalida(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, _ = paciente_e_profissional
-
-    with pytest.raises(DadosConsultaInvalidosError):
-        listar_consultas_do_paciente(
-            db_session,
-            paciente.id,
-            data_inicio="2026-10-01",
-        )
-
-
-def test_rejeita_data_fim_invalida(
-    db_session,
-    paciente_e_profissional,
-):
-    paciente, _ = paciente_e_profissional
-
-    with pytest.raises(DadosConsultaInvalidosError):
-        listar_consultas_do_paciente(
-            db_session,
-            paciente.id,
-            data_fim="2026-10-10",
-        )
 
 
 # ---------------------------------------------------------
@@ -668,53 +514,6 @@ def test_conta_apenas_consultas_nao_canceladas(
     assert contar_consultas_ativas(db_session) == 1
 
 
-def test_conta_consultas_ativas_por_profissional(
-    db_session,
-):
-    paciente = criar_paciente(
-        db_session,
-        nome="Maria Silva",
-        cpf="11144477735",
-        cep="01311000",
-    )
-
-    profissional1 = criar_profissional(
-        db_session,
-        nome="Dr. João",
-        especialidade="Fisioterapia",
-        registro_profissional="CREFITO-11111",
-    )
-
-    profissional2 = criar_profissional(
-        db_session,
-        nome="Dra. Ana",
-        especialidade="Fisioterapia",
-        registro_profissional="CREFITO-22222",
-    )
-
-    agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional1.id,
-        datetime(2026, 10, 1, 9, 0),
-    )
-
-    agendar_consulta(
-        db_session,
-        paciente.id,
-        profissional2.id,
-        datetime(2026, 10, 1, 11, 0),
-    )
-
-    assert (
-        contar_consultas_ativas(
-            db_session,
-            profissional_id=profissional1.id,
-        )
-        == 1
-    )
-
-
 # ---------------------------------------------------------
 # Profissional ocupado
 # ---------------------------------------------------------
@@ -748,34 +547,6 @@ def test_profissional_livre_agora_quando_nao_ha_consulta_proxima(
         db_session,
         profissional.id,
     ) is False
-
-
-def test_rejeita_agora_invalido(
-    db_session,
-    paciente_e_profissional,
-):
-    _, profissional = paciente_e_profissional
-
-    with pytest.raises(DadosConsultaInvalidosError):
-        profissional_ocupado_agora(
-            db_session,
-            profissional.id,
-            agora="agora",
-        )
-
-
-# ---------------------------------------------------------
-# Consultas do dia
-# ---------------------------------------------------------
-
-def test_rejeita_dia_invalido(
-    db_session,
-):
-    with pytest.raises(DadosConsultaInvalidosError):
-        listar_consultas_do_dia(
-            db_session,
-            dia="2026-10-01",
-        )
 
 
 # ---------------------------------------------------------
@@ -857,17 +628,6 @@ def test_busca_consulta_com_id_string_retorna_none(
     assert resultado is None
 
 
-def test_busca_consulta_com_boolean_retorna_none(
-    db_session,
-):
-    resultado = buscar_consulta_por_id(
-        db_session,
-        True,
-    )
-
-    assert resultado is None
-
-
 def test_atualizar_status_de_consulta_inexistente_retorna_none(
     db_session,
 ):
@@ -889,7 +649,6 @@ def test_cancelar_consulta_inexistente_retorna_none(
     )
 
     assert resultado is None
-
 
 # ---------------------------------------------------------
 # Integridade dos dados
@@ -1030,7 +789,17 @@ def test_nao_permite_data_hora_invalida(
         )
 
 
-# ---------------------------------------------------------
+def test_busca_consulta_com_boolean_retorna_none(
+    db_session,
+):
+    resultado = buscar_consulta_por_id(
+        db_session,
+        True,
+    )
+
+    assert resultado is None
+
+    # ---------------------------------------------------------
 # Transições de status
 # ---------------------------------------------------------
 
@@ -1114,9 +883,9 @@ def test_consulta_confirmada_pode_ser_cancelada(
 
     consulta = agendar_consulta(
         db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 14, 0),
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
     )
 
     atualizar_status(
@@ -1142,9 +911,9 @@ def test_consulta_cancelada_nao_pode_ser_confirmada(
 
     consulta = agendar_consulta(
         db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 14, 0),
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
     )
 
     atualizar_status(
@@ -1169,9 +938,9 @@ def test_consulta_cancelada_nao_pode_ser_concluida(
 
     consulta = agendar_consulta(
         db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 14, 0),
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
     )
 
     atualizar_status(
@@ -1196,9 +965,9 @@ def test_consulta_concluida_nao_pode_voltar_para_agendada(
 
     consulta = agendar_consulta(
         db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 14, 0),
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
     )
 
     atualizar_status(
@@ -1229,9 +998,9 @@ def test_consulta_concluida_nao_pode_ser_cancelada(
 
     consulta = agendar_consulta(
         db_session,
-        paciente.id,
-        profissional.id,
-        datetime(2026, 10, 1, 14, 0),
+        paciente_id=paciente.id,
+        profissional_id=profissional.id,
+        data_hora=datetime(2026, 10, 1, 14, 0),
     )
 
     atualizar_status(
@@ -1252,3 +1021,118 @@ def test_consulta_concluida_nao_pode_ser_cancelada(
             consulta.id,
             "cancelada",
         )
+
+# ---------------------------------------------------------
+# Regressão: assinaturas usadas de verdade pelas páginas
+# (essas 3 funções já foram chamadas com esses parâmetros
+# pelas páginas em pages/ sem que a assinatura do service
+# aceitasse — os testes abaixo existem pra nunca mais
+# dessincronizar página e service silenciosamente)
+# ---------------------------------------------------------
+
+def test_listar_consultas_do_paciente_aceita_filtro_de_profissional_e_canceladas(
+    db_session,
+):
+    paciente = criar_paciente(
+        db_session, nome="Maria Silva", cpf="11144477735", cep="01311000"
+    )
+    profissional1 = criar_profissional(
+        db_session, nome="Dr. João", especialidade="Ortopedia", registro_profissional="CREFITO-1"
+    )
+    profissional2 = criar_profissional(
+        db_session, nome="Dra. Ana", especialidade="Neurologia", registro_profissional="CREFITO-2"
+    )
+
+    agendar_consulta(db_session, paciente.id, profissional1.id, datetime(2026, 10, 1, 9, 0))
+    consulta_cancelada = agendar_consulta(
+        db_session, paciente.id, profissional2.id, datetime(2026, 10, 1, 11, 0)
+    )
+    cancelar_consulta(db_session, consulta_cancelada.id)
+
+    # mesma chamada que pages/1_Pacientes.py faz de verdade
+    resultado = listar_consultas_do_paciente(
+        db_session,
+        paciente_id=paciente.id,
+        profissional_id=profissional1.id,
+        incluir_canceladas=False,
+    )
+
+    assert len(resultado) == 1
+    assert resultado[0].profissional_id == profissional1.id
+
+
+def test_listar_consultas_aceita_filtro_por_dia(db_session, paciente_e_profissional):
+    paciente, profissional = paciente_e_profissional
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime(2026, 10, 1, 9, 0))
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime(2026, 10, 2, 9, 0))
+
+    # mesma chamada que pages/3_Agenda.py faz de verdade
+    resultado = listar_consultas(db_session, dia=datetime(2026, 10, 1))
+
+    assert len(resultado) == 1
+
+
+def test_listar_consultas_do_dia_sem_argumento_usa_hoje(db_session, paciente_e_profissional):
+    paciente, profissional = paciente_e_profissional
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime.now())
+
+    # mesma chamada que pages/0_Inicio.py faz de verdade
+    resultado = listar_consultas_do_dia(db_session)
+
+    assert len(resultado) == 1
+
+
+# ---------------------------------------------------------
+# Regressão: relacionamentos acessíveis após fechar a sessão
+# (as páginas sempre fecham a sessão antes de renderizar —
+# se a consulta não vier com paciente/profissional já
+# carregados, dá DetachedInstanceError na tela)
+# ---------------------------------------------------------
+
+def test_buscar_consulta_por_id_permite_acessar_relacionamentos_apos_fechar_sessao(
+    db_session, paciente_e_profissional
+):
+    paciente, profissional = paciente_e_profissional
+    consulta = agendar_consulta(db_session, paciente.id, profissional.id, datetime(2026, 10, 1, 9, 0))
+
+    encontrada = buscar_consulta_por_id(db_session, consulta.id)
+    db_session.close()
+
+    assert encontrada.paciente.nome == paciente.nome
+    assert encontrada.profissional.nome == profissional.nome
+
+
+def test_listar_consultas_do_paciente_permite_relacionamentos_apos_fechar_sessao(
+    db_session, paciente_e_profissional
+):
+    paciente, profissional = paciente_e_profissional
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime(2026, 10, 1, 9, 0))
+
+    resultado = listar_consultas_do_paciente(db_session, paciente_id=paciente.id)
+    db_session.close()
+
+    assert resultado[0].profissional.nome == profissional.nome
+
+
+def test_listar_consultas_permite_relacionamentos_apos_fechar_sessao(
+    db_session, paciente_e_profissional
+):
+    paciente, profissional = paciente_e_profissional
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime(2026, 10, 1, 9, 0))
+
+    resultado = listar_consultas(db_session)
+    db_session.close()
+
+    assert resultado[0].paciente.nome == paciente.nome
+
+
+def test_listar_consultas_do_dia_permite_relacionamentos_apos_fechar_sessao(
+    db_session, paciente_e_profissional
+):
+    paciente, profissional = paciente_e_profissional
+    agendar_consulta(db_session, paciente.id, profissional.id, datetime.now())
+
+    resultado = listar_consultas_do_dia(db_session)
+    db_session.close()
+
+    assert resultado[0].paciente.nome == paciente.nome

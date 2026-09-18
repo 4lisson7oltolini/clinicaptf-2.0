@@ -16,10 +16,13 @@ from services.consulta_service import (
     StatusConsultaInvalidoError,
 )
 
-from utils.auth_guard import exigir_login
+from utils.auth_guard import exigir_login, obter_usuario_autenticado
 
 
 exigir_login()
+
+usuario = obter_usuario_autenticado()
+profissional_logado_id = usuario.get("profissional_id")
 
 
 st.markdown(
@@ -121,6 +124,20 @@ try:
 finally:
     db.close()
 
+if usuario.get("perfil") == "profissional":
+    profissionais = [
+        profissional
+        for profissional in profissionais
+        if profissional.id == profissional_logado_id
+    ]
+
+    if not profissionais:
+        st.error(
+            "Seu usuário profissional não está vinculado a um cadastro "
+            "de profissional. Solicite ao administrador a correção do cadastro."
+        )
+        st.stop()
+
 
 st.markdown("### Filtros da agenda")
 
@@ -138,7 +155,10 @@ with col1:
 
 with col2:
 
-    opcoes_profissionais = [None] + profissionais
+    if usuario.get("perfil") == "profissional":
+        opcoes_profissionais = profissionais
+    else:
+        opcoes_profissionais = [None] + profissionais
 
     profissional_filtro = st.selectbox(
         "Profissional",
@@ -148,6 +168,7 @@ with col2:
             if profissional is None
             else profissional.nome
         ),
+        disabled=usuario.get("perfil") == "profissional",
     )
 
 
