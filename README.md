@@ -76,6 +76,34 @@ Essa estrutura facilita manutenção, testes e futuras evoluções do sistema.
 * Registro profissional
 * Controle de registro duplicado
 
+### Consultas e agenda
+
+* Agendamento de consultas
+* Filtros por data e profissional
+* Controle de status: agendada, confirmada, concluída e cancelada
+* Visualização das consultas do profissional autenticado
+* Cancelamento e atualização de status
+
+### Usuários e permissões
+
+O sistema possui três perfis de acesso:
+
+* **Administrador:** acessa todos os menus, pode cadastrar e remover usuários e gerencia as configurações do sistema.
+* **Profissional:** acessa a agenda, pode agendar consultas e visualiza somente as consultas vinculadas ao próprio cadastro profissional.
+* **Atendente:** pode cadastrar pacientes e agendar consultas, mas não acessa o cadastro de usuários ou profissionais.
+
+O cadastro de usuários fica disponível em **Configurações** somente para administradores. Usuários profissionais são cadastrados com especialidade, registro profissional e vínculo à conta de acesso.
+
+### Acessibilidade e aparência
+
+Em **Configurações**, o usuário pode escolher:
+
+* Tema claro ou escuro
+* Contraste de texto padrão, alto ou máximo
+* Restauração das configurações padrão
+
+As preferências são aplicadas ao aplicativo inteiro após clicar em **Salvar configurações**.
+
 O projeto foi desenvolvido com uma arquitetura em camadas, buscando aplicar boas práticas de desenvolvimento de software e conceitos estudados durante a formação em Desenvolvimento de Sistemas.
 
 Entre os principais recursos estão:
@@ -86,6 +114,8 @@ Entre os principais recursos estão:
 * Cadastro e gerenciamento de profissionais
 * Gerenciamento de consultas
 * Agenda
+* Controle de acesso por perfil
+* Configurações de acessibilidade
 * Persistência de dados
 * Validação de informações
 * Migrações de banco de dados
@@ -320,6 +350,16 @@ python -m streamlit run app.py
 
 A aplicação será iniciada localmente pelo Streamlit.
 
+### Criar o primeiro administrador
+
+Para criar a primeira conta administrativa fora do ambiente demo:
+
+```bash
+python create_admin.py
+```
+
+O script solicitará usuário, senha e nome completo. A conta criada receberá o perfil `admin`.
+
 ---
 
 ## Testes
@@ -347,6 +387,8 @@ Os testes abrangem principalmente:
 * Consultas
 * Validações
 * Regras dos services
+* Permissões por perfil
+* Filtros da agenda
 
 ---
 
@@ -511,12 +553,16 @@ git push origin feature/nova-funcionalidade
 * [x] Dados fictícios
 * [x] Configuração do Streamlit
 * [x] Docker
+* [x] Perfis admin, profissional e atendente
+* [x] Controle de acesso por perfil
+* [x] Cadastro e remoção de usuários por administradores
+* [x] Agenda filtrada para profissionais
+* [x] Configurações de acessibilidade
 
 ### Próximas etapas
 
 * [ ] Melhorar dashboard
 * [ ] Melhorar agenda
-* [ ] Controle de permissões por usuário
 * [ ] Relatórios
 * [ ] Exportação de dados
 * [ ] Melhorias na experiência do usuário
