@@ -19,7 +19,7 @@ inicializar_preferencias()
 
 st.set_page_config(
     page_title="Clínica PTF 2.0",
-    page_icon="🩺",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -578,7 +578,7 @@ usuario = st.session_state["usuario"]
 pagina_inicio = st.Page(
     "pages/0_Inicio.py",
     title="Início",
-    icon="🏠",
+    icon=":material/home:",
     default=True,
 )
 
@@ -586,32 +586,44 @@ pagina_inicio = st.Page(
 pagina_pacientes = st.Page(
     "pages/1_Pacientes.py",
     title="Pacientes",
-    icon="👤",
+    icon=":material/person:",
 )
 
 
 pagina_profissionais = st.Page(
     "pages/2_Profissionais.py",
     title="Profissionais",
-    icon="🩺",
+    icon=":material/medical_services:",
 )
 
 
 pagina_agenda = st.Page(
     "pages/3_Agenda.py",
     title="Agenda",
-    icon="📅",
+    icon=":material/calendar_month:",
 )
 
 
 pagina_configuracoes = st.Page(
     "pages/5_Configuracoes.py",
     title="Configurações",
-    icon="⚙️",
+    icon=":material/settings:",
 )
 
 
-paginas_principais = [pagina_inicio, pagina_agenda, pagina_configuracoes]
+pagina_relatorios = st.Page(
+    "pages/6_Relatorios.py",
+    title="Relatórios",
+    icon=":material/assessment:",
+)
+
+
+paginas_principais = [
+    pagina_inicio,
+    pagina_agenda,
+    pagina_relatorios,
+    pagina_configuracoes,
+]
 
 if usuario["perfil"] in {"admin", "atendente"}:
     paginas_principais.insert(1, pagina_pacientes)
@@ -653,13 +665,14 @@ with st.sidebar:
 
     st.markdown("**Principal**")
 
-    st.page_link(pagina_inicio, label="Início", icon="🏠")
+    st.page_link(pagina_inicio, label="Início", icon=":material/home:")
     if usuario["perfil"] in {"admin", "atendente"}:
-        st.page_link(pagina_pacientes, label="Pacientes", icon="👤")
+        st.page_link(pagina_pacientes, label="Pacientes", icon=":material/person:")
     if usuario["perfil"] == "admin":
-        st.page_link(pagina_profissionais, label="Profissionais", icon="🩺")
-    st.page_link(pagina_agenda, label="Agenda", icon="📅")
-    st.page_link(pagina_configuracoes, label="Configurações", icon="⚙️")
+        st.page_link(pagina_profissionais, label="Profissionais", icon=":material/medical_services:")
+    st.page_link(pagina_agenda, label="Agenda", icon=":material/calendar_month:")
+    st.page_link(pagina_relatorios, label="Relatórios", icon=":material/assessment:")
+    st.page_link(pagina_configuracoes, label="Configurações", icon=":material/settings:")
 
     st.divider()
 

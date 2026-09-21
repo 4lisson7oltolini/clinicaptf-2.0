@@ -104,6 +104,21 @@ Em **Configurações**, o usuário pode escolher:
 
 As preferências são aplicadas ao aplicativo inteiro após clicar em **Salvar configurações**.
 
+### Relatórios
+
+A página **Relatórios** permite gerar:
+
+* Relatório de agendamentos por dia, semana, mês ou ano
+* Histórico de consultas de um paciente
+* Histórico de atendimentos por profissional
+
+Os relatórios podem ser visualizados na aplicação e baixados nos formatos:
+
+* CSV, compatível com planilhas
+* PDF, em formato de tabela
+
+Profissionais visualizam apenas os próprios atendimentos. Administradores e atendentes podem consultar os registros disponíveis para a clínica.
+
 O projeto foi desenvolvido com uma arquitetura em camadas, buscando aplicar boas práticas de desenvolvimento de software e conceitos estudados durante a formação em Desenvolvimento de Sistemas.
 
 Entre os principais recursos estão:
@@ -116,6 +131,7 @@ Entre os principais recursos estão:
 * Agenda
 * Controle de acesso por perfil
 * Configurações de acessibilidade
+* Relatórios em CSV e PDF
 * Persistência de dados
 * Validação de informações
 * Migrações de banco de dados
@@ -558,6 +574,8 @@ git push origin feature/nova-funcionalidade
 * [x] Cadastro e remoção de usuários por administradores
 * [x] Agenda filtrada para profissionais
 * [x] Configurações de acessibilidade
+* [x] Relatórios por período, paciente e profissional
+* [x] Exportação de relatórios em CSV e PDF
 
 ### Próximas etapas
 
