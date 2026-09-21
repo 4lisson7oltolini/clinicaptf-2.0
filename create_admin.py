@@ -2,11 +2,16 @@
 Script único: cria o primeiro usuário admin do sistema.
 Rodar com: python create_admin.py
 """
-from database.connection import SessionLocal, init_db
-from services.auth_service import criar_usuario, UsuarioJaExisteError
+from database.connection import SessionLocal
+from database.initialization import executar_migrations
+from services.auth_service import (
+    DadosUsuarioInvalidosError,
+    UsuarioJaExisteError,
+    criar_usuario,
+)
 
 if __name__ == "__main__":
-    init_db()
+    executar_migrations()
     db = SessionLocal()
     username = input("Usuário: ").strip()
     senha = input("Senha: ").strip()
@@ -23,5 +28,7 @@ if __name__ == "__main__":
         print(f"Usuário '{username}' criado com sucesso.")
     except UsuarioJaExisteError as erro:
         print(f"Erro: {erro}")
+    except DadosUsuarioInvalidosError as erro:
+        print(f"Dados inválidos: {erro}")
     finally:
         db.close()
