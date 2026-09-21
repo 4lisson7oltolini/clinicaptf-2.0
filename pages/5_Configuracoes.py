@@ -66,12 +66,17 @@ if salvar:
     st.rerun()
 
 
-if st.button("Restaurar configurações padrão"):
+def restaurar_configuracoes_padrao() -> None:
     st.session_state["ptf_tema"] = "Claro"
     st.session_state["ptf_contraste"] = "Padrão"
     st.session_state["ptf_tema_edicao"] = "Claro"
     st.session_state["ptf_contraste_edicao"] = "Padrão"
-    st.rerun()
+
+
+st.button(
+    "Restaurar configurações padrão",
+    on_click=restaurar_configuracoes_padrao,
+)
 
 
 if usuario_e_admin():

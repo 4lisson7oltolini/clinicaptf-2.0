@@ -1,8 +1,12 @@
 import pytest
+from unittest.mock import patch
+from sqlalchemy.exc import IntegrityError
 
 from services.auth_service import (
     criar_usuario,
     autenticar,
+    listar_usuarios,
+    remover_usuario,
     UsuarioJaExisteError,
     DadosUsuarioInvalidosError,
 )
@@ -157,3 +161,88 @@ def test_username_com_espacos_e_normalizado(db_session):
 
     assert usuario is not None
     assert usuario.username == "admin"
+
+
+def test_rejeita_perfil_invalido(db_session):
+    with pytest.raises(DadosUsuarioInvalidosError):
+        criar_usuario(
+            db_session,
+            username="usuario",
+            senha="senha123",
+            nome_completo="Usuário Teste",
+            perfil="gerente",
+        )
+
+
+def test_lista_usuarios_em_ordem_alfabetica(db_session):
+    criar_usuario(
+        db_session,
+        username="zeta",
+        senha="senha123",
+        nome_completo="Zeta",
+    )
+    criar_usuario(
+        db_session,
+        username="alfa",
+        senha="senha123",
+        nome_completo="Alfa",
+    )
+
+    usuarios = listar_usuarios(db_session)
+
+    assert [usuario.nome_completo for usuario in usuarios] == [
+        "Alfa",
+        "Zeta",
+    ]
+
+
+def test_criar_usuario_converte_integrity_error(db_session):
+    erro_banco = IntegrityError("insert", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        with pytest.raises(UsuarioJaExisteError):
+            criar_usuario(
+                db_session,
+                username="usuario",
+                senha="senha123",
+                nome_completo="Usuário Teste",
+            )
+
+
+def test_remover_usuario_atual_nao_e_permitido(db_session):
+    usuario = criar_usuario(
+        db_session,
+        username="admin",
+        senha="senha123",
+        nome_completo="Administrador",
+    )
+
+    with pytest.raises(DadosUsuarioInvalidosError):
+        remover_usuario(
+            db_session,
+            usuario.id,
+            usuario_atual_id=usuario.id,
+        )
+
+
+def test_remover_usuario_inexistente_retorna_false(db_session):
+    assert remover_usuario(db_session, 999999) is False
+
+
+def test_remover_usuario_desvincula_profissional(db_session):
+    from services.profissional_service import criar_profissional_com_usuario
+
+    profissional = criar_profissional_com_usuario(
+        db_session,
+        nome="Dr. Usuário",
+        especialidade="Cardiologia",
+        registro_profissional="CRM-99999",
+        username="profissional",
+        senha="senha123",
+    )
+    usuario_id = profissional.usuario_id
+
+    assert remover_usuario(db_session, usuario_id) is True
+    db_session.refresh(profissional)
+
+    assert profissional.usuario_id is None

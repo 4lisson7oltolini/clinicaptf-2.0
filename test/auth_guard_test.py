@@ -170,10 +170,18 @@ def test_exigir_login_permite_usuario_autenticado():
     exigir_login()
 
 
-def test_exigir_login_interrompe_usuario_nao_autenticado():
+def test_exigir_login_interrompe_usuario_nao_autenticado(monkeypatch):
     limpar_sessao()
 
-    assert usuario_autenticado() is False
+    monkeypatch.setattr(st, "warning", lambda mensagem: None)
+    monkeypatch.setattr(
+        st,
+        "stop",
+        lambda: (_ for _ in ()).throw(RuntimeError("login necessário")),
+    )
+
+    with pytest.raises(RuntimeError, match="login necessário"):
+        exigir_login()
 
 
 # ---------------------------------------------------------

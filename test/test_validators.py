@@ -40,6 +40,12 @@ def test_validar_cpf_invalido():
     ) is False
 
 
+def test_validar_cpf_com_primeiro_digito_verificador_invalido():
+    assert validar_cpf(
+        "529.982.247-35"
+    ) is False
+
+
 def test_validar_cpf_com_tamanho_invalido():
     assert validar_cpf(
         "123456789"
@@ -56,6 +62,10 @@ def test_formatar_cpf():
     assert formatar_cpf(
         "52998224725"
     ) == "529.982.247-25"
+
+
+def test_formatar_cpf_invalido_retorna_limpo():
+    assert formatar_cpf("123") == "123"
 
 
 # =========================================================
@@ -90,6 +100,10 @@ def test_formatar_cep():
     assert formatar_cep(
         "88330000"
     ) == "88330-000"
+
+
+def test_formatar_cep_invalido_retorna_limpo():
+    assert formatar_cep("123") == "123"
 
 
 # =========================================================
@@ -130,6 +144,10 @@ def test_formatar_telefone_fixo():
     assert formatar_telefone(
         "4733334444"
     ) == "(47) 3333-4444"
+
+
+def test_formatar_telefone_invalido_retorna_limpo():
+    assert formatar_telefone("99999") == "99999"
 
 
 # =========================================================
