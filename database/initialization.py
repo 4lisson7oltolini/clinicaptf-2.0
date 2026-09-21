@@ -9,6 +9,7 @@ O schema do banco continua sendo controlado exclusivamente pelo Alembic.
 """
 
 from pathlib import Path
+from functools import lru_cache
 
 from alembic import command
 from alembic.config import Config
@@ -27,9 +28,14 @@ def executar_migrations() -> None:
     command.upgrade(config, "head")
 
 
+@lru_cache(maxsize=1)
 def inicializar_aplicacao() -> None:
     """
     Prepara o banco antes da aplicação ser utilizada.
+
+    A inicialização é executada uma única vez por processo. O Streamlit
+    reexecuta o script a cada interação, mas não é necessário verificar as
+    migrations e os dados demo em todas essas reexecuções.
 
     Em ambiente demo:
         - executa as migrations;
