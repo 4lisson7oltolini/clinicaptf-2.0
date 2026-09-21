@@ -1,6 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from services.paciente_service import criar_paciente
 from services.profissional_service import criar_profissional
@@ -17,6 +19,8 @@ from services.consulta_service import (
     profissional_ocupado_agora,
     ConflitoDeHorarioError,
     StatusConsultaInvalidoError,
+    DadosConsultaInvalidosError,
+    _profissional_ocupado,
 )
 
 
@@ -85,6 +89,60 @@ def test_bloqueia_conflito_de_horario(
             paciente.id,
             profissional.id,
             datetime(2026, 10, 1, 14, 20),
+        )
+
+
+def test_profissional_ocupado_ignora_a_propria_consulta(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 14, 0),
+    )
+
+    assert _profissional_ocupado(
+        db_session,
+        profissional.id,
+        consulta.data_hora,
+        consulta_id=consulta.id,
+    ) is False
+
+
+def test_agendar_consulta_converte_integrity_error(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    erro_banco = IntegrityError("insert", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        with pytest.raises(DadosConsultaInvalidosError):
+            agendar_consulta(
+                db_session,
+                paciente.id,
+                profissional.id,
+                datetime(2026, 10, 1, 14, 0),
+            )
+
+
+def test_agendar_consulta_rejeita_status_invalido(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    with pytest.raises(StatusConsultaInvalidoError):
+        agendar_consulta(
+            db_session,
+            paciente.id,
+            profissional.id,
+            datetime(2026, 10, 1, 14, 0),
+            status="inexistente",
         )
 
 
@@ -179,6 +237,66 @@ def test_lista_apenas_consultas_do_dia_informado(
 
     assert len(consultas_de_hoje) == 1
     assert consultas_de_hoje[0].data_hora.date() == hoje.date()
+
+
+def test_listar_consultas_aceita_data_como_alias_de_dia(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    horario = datetime(2026, 10, 1, 9, 0)
+
+    agendar_consulta(db_session, paciente.id, profissional.id, horario)
+
+    resultado = listar_consultas(
+        db_session,
+        data=horario,
+    )
+
+    assert len(resultado) == 1
+    assert resultado[0].data_hora == horario
+
+
+def test_listar_consultas_rejeita_dia_e_data_juntos(db_session):
+    with pytest.raises(DadosConsultaInvalidosError):
+        listar_consultas(
+            db_session,
+            dia=date(2026, 10, 1),
+            data=date(2026, 10, 1),
+        )
+
+
+@pytest.mark.parametrize(
+    "dia",
+    ["2026-10-01", 123],
+)
+def test_listar_consultas_rejeita_dia_invalido(db_session, dia):
+    with pytest.raises(DadosConsultaInvalidosError):
+        listar_consultas(db_session, dia=dia)
+
+
+def test_listar_consultas_filtra_por_data_e_status(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    horario = datetime(2026, 10, 1, 9, 0)
+
+    agendar_consulta(db_session, paciente.id, profissional.id, horario)
+
+    resultado = listar_consultas(
+        db_session,
+        profissional_id=profissional.id,
+        dia=date(2026, 10, 1),
+        status="agendada",
+    )
+
+    assert len(resultado) == 1
+
+
+def test_listar_consultas_rejeita_status_invalido(db_session):
+    with pytest.raises(StatusConsultaInvalidoError):
+        listar_consultas(db_session, status="inexistente")
 
 
 def test_lista_consultas_por_profissional(
@@ -371,6 +489,41 @@ def test_filtra_historico_por_periodo(
     ).date()
 
 
+def test_historico_aceita_datetime_no_inicio_e_fim(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    horario = datetime(2026, 10, 10, 9, 0)
+
+    agendar_consulta(db_session, paciente.id, profissional.id, horario)
+
+    resultado = listar_consultas_do_paciente(
+        db_session,
+        paciente.id,
+        data_inicio=horario - timedelta(minutes=1),
+        data_fim=horario + timedelta(minutes=1),
+    )
+
+    assert len(resultado) == 1
+
+
+@pytest.mark.parametrize("campo", ["data_inicio", "data_fim"])
+def test_historico_rejeita_periodo_invalido(
+    db_session,
+    paciente_e_profissional,
+    campo,
+):
+    paciente, _ = paciente_e_profissional
+
+    with pytest.raises(DadosConsultaInvalidosError):
+        listar_consultas_do_paciente(
+            db_session,
+            paciente.id,
+            **{campo: "2026-10-01"},
+        )
+
+
 # ---------------------------------------------------------
 # Busca por ID
 # ---------------------------------------------------------
@@ -480,6 +633,24 @@ def test_cancelar_consulta(
     assert cancelada.status == "cancelada"
 
 
+def test_atualizar_status_propaga_integrity_error(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    consulta = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 14, 0),
+    )
+    erro_banco = IntegrityError("update", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        with pytest.raises(IntegrityError):
+            atualizar_status(db_session, consulta.id, "confirmada")
+
+
 # ---------------------------------------------------------
 # Contagem
 # ---------------------------------------------------------
@@ -512,6 +683,37 @@ def test_conta_apenas_consultas_nao_canceladas(
     )
 
     assert contar_consultas_ativas(db_session) == 1
+
+
+def test_conta_consultas_ativas_por_profissional(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    outro_profissional = criar_profissional(
+        db_session,
+        nome="Dra. Ana",
+        especialidade="Ortopedia",
+        registro_profissional="CREFITO-99999",
+    )
+
+    agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 9, 0),
+    )
+    agendar_consulta(
+        db_session,
+        paciente.id,
+        outro_profissional.id,
+        datetime(2026, 10, 1, 11, 0),
+    )
+
+    assert contar_consultas_ativas(
+        db_session,
+        profissional_id=profissional.id,
+    ) == 1
 
 
 # ---------------------------------------------------------
@@ -547,6 +749,94 @@ def test_profissional_livre_agora_quando_nao_ha_consulta_proxima(
         db_session,
         profissional.id,
     ) is False
+
+
+def test_profissional_ocupado_agora_rejeita_horario_invalido(
+    db_session,
+    paciente_e_profissional,
+):
+    _, profissional = paciente_e_profissional
+
+    with pytest.raises(DadosConsultaInvalidosError):
+        profissional_ocupado_agora(
+            db_session,
+            profissional.id,
+            agora="2026-10-01 09:00",
+        )
+
+
+def test_profissional_ocupado_agora_usa_fallback_do_sqlite(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    consulta = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 9, 0),
+    )
+    consulta_query = MagicMock()
+    consulta_query.filter.return_value = consulta_query
+    consulta_query.first.return_value = None
+    consulta_query.all.return_value = [consulta]
+
+    with patch.object(
+        db_session,
+        "query",
+        return_value=consulta_query,
+    ):
+        assert profissional_ocupado_agora(
+            db_session,
+            profissional.id,
+            agora=datetime(2026, 10, 1, 9, 10),
+        ) is True
+
+
+def test_profissional_ocupado_agora_retorna_true_na_busca_sql(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    consulta = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 9, 0),
+    )
+    consulta_query = MagicMock()
+    consulta_query.filter.return_value = consulta_query
+    consulta_query.first.return_value = consulta
+
+    with patch.object(
+        db_session,
+        "query",
+        return_value=consulta_query,
+    ):
+        assert profissional_ocupado_agora(
+            db_session,
+            profissional.id,
+            agora=datetime(2026, 10, 1, 9, 10),
+        ) is True
+
+
+def test_listar_consultas_do_dia_aceita_datetime(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+    horario = datetime(2026, 10, 1, 9, 0)
+
+    agendar_consulta(db_session, paciente.id, profissional.id, horario)
+
+    resultado = listar_consultas_do_dia(db_session, dia=horario)
+
+    assert len(resultado) == 1
+
+
+def test_listar_consultas_do_dia_rejeita_tipo_invalido(db_session):
+    with pytest.raises(DadosConsultaInvalidosError):
+        listar_consultas_do_dia(db_session, dia="2026-10-01")
 
 
 # ---------------------------------------------------------
@@ -750,7 +1040,7 @@ def test_nao_permite_paciente_inexistente(
 ):
     _, profissional = paciente_e_profissional
 
-    with pytest.raises(ValueError):
+    with pytest.raises(DadosConsultaInvalidosError):
         agendar_consulta(
             db_session,
             paciente_id=999999,
@@ -765,7 +1055,7 @@ def test_nao_permite_profissional_inexistente(
 ):
     paciente, _ = paciente_e_profissional
 
-    with pytest.raises(ValueError):
+    with pytest.raises(DadosConsultaInvalidosError):
         agendar_consulta(
             db_session,
             paciente_id=paciente.id,
@@ -1021,6 +1311,86 @@ def test_consulta_concluida_nao_pode_ser_cancelada(
             consulta.id,
             "cancelada",
         )
+
+
+@pytest.mark.parametrize(
+    ("status_inicial", "status_final"),
+    [
+        ("agendada", "concluida"),
+        ("confirmada", "agendada"),
+        ("confirmada", "confirmada"),
+        ("concluida", "agendada"),
+        ("concluida", "confirmada"),
+        ("concluida", "concluida"),
+        ("concluida", "cancelada"),
+        ("cancelada", "agendada"),
+        ("cancelada", "confirmada"),
+        ("cancelada", "concluida"),
+        ("cancelada", "cancelada"),
+    ],
+)
+def test_rejeita_todas_as_transicoes_de_status_invalidas(
+    db_session,
+    paciente_e_profissional,
+    status_inicial,
+    status_final,
+):
+    paciente, profissional = paciente_e_profissional
+
+    consulta = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 14, 0),
+    )
+
+    if status_inicial == "confirmada":
+        atualizar_status(db_session, consulta.id, "confirmada")
+    elif status_inicial == "concluida":
+        atualizar_status(db_session, consulta.id, "confirmada")
+        atualizar_status(db_session, consulta.id, "concluida")
+    elif status_inicial == "cancelada":
+        atualizar_status(db_session, consulta.id, "cancelada")
+
+    with pytest.raises(ValueError):
+        atualizar_status(
+            db_session,
+            consulta.id,
+            status_final,
+        )
+
+    db_session.refresh(consulta)
+    assert consulta.status == status_inicial
+
+
+def test_alterar_status_nao_cria_conflito_com_outra_consulta(
+    db_session,
+    paciente_e_profissional,
+):
+    paciente, profissional = paciente_e_profissional
+
+    primeira = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 9, 0),
+    )
+    segunda = agendar_consulta(
+        db_session,
+        paciente.id,
+        profissional.id,
+        datetime(2026, 10, 1, 9, 50),
+    )
+
+    atualizada = atualizar_status(
+        db_session,
+        primeira.id,
+        "confirmada",
+    )
+
+    assert atualizada.status == "confirmada"
+    assert atualizada.data_hora == datetime(2026, 10, 1, 9, 0)
+    assert buscar_consulta_por_id(db_session, segunda.id).status == "agendada"
 
 # ---------------------------------------------------------
 # Regressão: assinaturas usadas de verdade pelas páginas

@@ -13,6 +13,7 @@ def inicializar_preferencias() -> None:
 def aplicar_estilos_acessibilidade() -> None:
     tema = st.session_state.get("ptf_tema", "Claro")
     contraste = st.session_state.get("ptf_contraste", "Padrão")
+    esquema_navegador = "dark" if tema == "Escuro" else "light"
 
     if tema == "Escuro":
         fundo = "#0F172A"
@@ -45,7 +46,7 @@ def aplicar_estilos_acessibilidade() -> None:
         f"""
         <style>
         :root {{
-            color-scheme: {tema.lower()};
+            color-scheme: {esquema_navegador};
             --primary-color: #117C73;
             --background-color: {fundo};
             --secondary-background-color: {superficie};
@@ -96,14 +97,54 @@ def aplicar_estilos_acessibilidade() -> None:
             color: {placeholder} !important;
         }}
 
+        .stButton > button,
+        div[data-testid="stFormSubmitButton"] button,
+        div[data-testid="stDownloadButton"] button {{
+            background-color: #117C73 !important;
+            color: #FFFFFF !important;
+            border-color: #117C73 !important;
+        }}
+
+        .stButton > button:hover,
+        div[data-testid="stFormSubmitButton"] button:hover,
+        div[data-testid="stDownloadButton"] button:hover {{
+            background-color: #0D6861 !important;
+            color: #FFFFFF !important;
+            border-color: #0D6861 !important;
+        }}
+
+        .stButton > button:disabled,
+        div[data-testid="stFormSubmitButton"] button:disabled,
+        div[data-testid="stDownloadButton"] button:disabled {{
+            background-color: {borda} !important;
+            color: {texto_secundario} !important;
+            border-color: {borda} !important;
+            opacity: 1 !important;
+        }}
+
         div[data-baseweb="select"] span,
         div[data-testid="stMetric"],
         div[data-testid="stForm"],
         div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stDataFrame"],
         details {{
             background-color: {superficie} !important;
             color: {texto} !important;
             border-color: {borda} !important;
+        }}
+
+        div[data-testid="stMetric"] *,
+        div[data-testid="stForm"] *,
+        div[data-testid="stVerticalBlockBorderWrapper"] *,
+        div[data-testid="stDataFrame"] *,
+        details * {{
+            color: {texto} !important;
+        }}
+
+        div[data-testid="stMetricLabel"],
+        [data-testid="stCaptionContainer"],
+        .ptf-page-subtitle {{
+            color: {texto_secundario} !important;
         }}
 
         div[data-testid="stMetricValue"],

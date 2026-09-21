@@ -3,6 +3,8 @@ Testes da camada de serviço de Profissional.
 """
 
 import pytest
+from unittest.mock import patch
+from sqlalchemy.exc import IntegrityError
 
 from models.profissional import Profissional
 from models.usuario import Usuario
@@ -325,6 +327,21 @@ def test_remove_profissional_inexistente(db_session):
     assert resultado is False
 
 
+def test_remove_profissional_retorna_false_em_erro_de_integridade(db_session):
+    profissional = criar_profissional(
+        db_session,
+        nome="Dr. Carlos Mendes",
+        especialidade="Cardiologia",
+        registro_profissional="CRM-SC-123456",
+    )
+    erro_banco = IntegrityError("delete", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        resultado = remover_profissional(db_session, profissional.id)
+
+    assert resultado is False
+
+
 def test_cria_profissional_com_usuario(db_session):
     profissional = criar_profissional_com_usuario(
         db_session,
@@ -458,6 +475,36 @@ def test_nao_cria_usuario_quando_registro_profissional_ja_existe(
 
     assert len(profissionais) == 1
     assert len(usuarios) == 1
+
+
+def test_criacao_conjunta_converte_integrity_error(db_session):
+    erro_banco = IntegrityError("insert", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        with pytest.raises(ProfissionalJaExisteError):
+            criar_profissional_com_usuario(
+                db_session,
+                nome="Dr. Carlos Mendes",
+                especialidade="Fisioterapia",
+                registro_profissional="CREFITO-123456",
+                username="carlos",
+                senha="senha1234",
+            )
+
+
+def test_criacao_conjunta_repropaga_erro_inesperado(db_session):
+    erro = RuntimeError("falha inesperada")
+
+    with patch.object(db_session, "commit", side_effect=erro):
+        with pytest.raises(RuntimeError, match="falha inesperada"):
+            criar_profissional_com_usuario(
+                db_session,
+                nome="Dr. Carlos Mendes",
+                especialidade="Fisioterapia",
+                registro_profissional="CREFITO-123456",
+                username="carlos",
+                senha="senha1234",
+            )
 
 
 def test_rejeita_senha_com_menos_de_8_caracteres(

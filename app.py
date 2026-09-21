@@ -217,18 +217,18 @@ st.markdown(
        ===================================================== */
 
     div[data-testid="stMetric"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
+        background-color: var(--ptf-surface) !important;
+        border: 1px solid var(--ptf-border) !important;
         border-radius: 12px !important;
         padding: 1rem !important;
     }
 
     div[data-testid="stMetricLabel"] {
-        color: #64748B !important;
+        color: var(--ptf-text-secondary) !important;
     }
 
     div[data-testid="stMetricValue"] {
-        color: #172033 !important;
+        color: var(--ptf-text) !important;
     }
 
 
@@ -237,8 +237,8 @@ st.markdown(
        ===================================================== */
 
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF !important;
-        border-color: #E2E8F0 !important;
+        background-color: var(--ptf-surface) !important;
+        border-color: var(--ptf-border) !important;
         border-radius: 12px !important;
     }
 
@@ -274,7 +274,8 @@ st.markdown(
        ===================================================== */
 
     div[data-testid="stDataFrame"] {
-        border: 1px solid #E2E8F0 !important;
+        background-color: var(--ptf-surface) !important;
+        border: 1px solid var(--ptf-border) !important;
         border-radius: 10px !important;
         overflow: hidden !important;
     }
@@ -285,13 +286,13 @@ st.markdown(
        ===================================================== */
 
     details {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
+        background-color: var(--ptf-surface) !important;
+        border: 1px solid var(--ptf-border) !important;
         border-radius: 10px !important;
     }
 
     details summary {
-        color: #172033 !important;
+        color: var(--ptf-text) !important;
     }
 
 

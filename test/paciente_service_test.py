@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+from sqlalchemy.exc import IntegrityError
 
 from services.paciente_service import (
     criar_paciente,
@@ -29,6 +31,16 @@ def test_rejeita_cpf_invalido(db_session):
     with pytest.raises(ValueError):
         criar_paciente(db_session, nome="Fulano", cpf="12345678900", cep="01311000")
 
+
+def test_rejeita_cpf_com_primeiro_digito_verificador_invalido(db_session):
+    with pytest.raises(ValueError):
+        criar_paciente(
+            db_session,
+            nome="Fulano da Silva",
+            cpf="52998224735",
+            cep="01311000",
+        )
+
 def test_rejeita_cep_invalido(db_session):
     with pytest.raises(ValueError):
         criar_paciente(
@@ -37,6 +49,30 @@ def test_rejeita_cep_invalido(db_session):
             cpf="11144477735",
             cep="123"
         )
+
+
+def test_rejeita_telefone_invalido(db_session):
+    with pytest.raises(ValueError):
+        criar_paciente(
+            db_session,
+            nome="Fulano da Silva",
+            cpf="11144477735",
+            cep="01311000",
+            telefone="123",
+        )
+
+
+def test_criar_paciente_converte_integrity_error(db_session):
+    erro_banco = IntegrityError("insert", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        with pytest.raises(PacienteJaExisteError):
+            criar_paciente(
+                db_session,
+                nome="Fulano da Silva",
+                cpf="11144477735",
+                cep="01311000",
+            )
 
 
 def test_aceita_cpf_com_mascara(db_session):
@@ -152,6 +188,21 @@ def test_remover_paciente_com_id_string_retorna_false(db_session):
         db_session,
         "1",
     )
+
+    assert resultado is False
+
+
+def test_remover_paciente_retorna_false_em_erro_de_integridade(db_session):
+    paciente = criar_paciente(
+        db_session,
+        nome="Maria Silva",
+        cpf="11144477735",
+        cep="01311000",
+    )
+    erro_banco = IntegrityError("delete", {}, Exception("falha"))
+
+    with patch.object(db_session, "commit", side_effect=erro_banco):
+        resultado = remover_paciente(db_session, paciente.id)
 
     assert resultado is False
 
