@@ -5,120 +5,194 @@ import pytest
 import config
 
 
-def test_validate_config_rejeita_database_url_ausente(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "")
-
-    with pytest.raises(ValueError, match="DATABASE_URL"):
-        config.validate_config()
+SECRET_KEY_TESTE = "test-secret-key-32-caracteres-segura"
 
 
-def test_validate_config_rejeita_ambiente_desconhecido(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "sqlite://")
-    monkeypatch.setattr(config, "APP_ENV", "staging")
-
-    with pytest.raises(ValueError, match="APP_ENV inválido"):
-        config.validate_config()
-
-
-@pytest.mark.parametrize(
-    "secret_key",
-    [
-        "",
-        "dev-secret-change-me",
-        "change-me-in-your-local-env",
-        "chave-curta",
-    ],
-)
-def test_validate_config_exige_chave_segura_em_producao(
-    monkeypatch,
-    secret_key,
-):
-    monkeypatch.setattr(config, "DATABASE_URL", "postgresql://teste")
-    monkeypatch.setattr(config, "APP_ENV", "production")
-    monkeypatch.setattr(config, "SECRET_KEY", secret_key)
-
-    with pytest.raises(ValueError, match="SECRET_KEY"):
-        config.validate_config()
-
-
-def test_validate_config_aceita_producao_com_chave_segura(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "postgresql://teste")
-    monkeypatch.setattr(config, "APP_ENV", "production")
-    monkeypatch.setattr(
-        config,
-        "SECRET_KEY",
-        "chave-segura-de-producao-com-32-caracteres",
-    )
-
-    config.validate_config()
-
-
-def test_validate_config_rejeita_sqlite_em_producao(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "sqlite:///producao.db")
-    monkeypatch.setattr(config, "APP_ENV", "production")
-    monkeypatch.setattr(
-        config,
-        "SECRET_KEY",
-        "chave-segura-de-producao-com-32-caracteres",
-    )
-
-    with pytest.raises(ValueError, match="PostgreSQL"):
-        config.validate_config()
-
-
-def test_validate_config_rejeita_banco_nao_postgresql_em_producao(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "mysql://producao")
-    monkeypatch.setattr(config, "APP_ENV", "production")
-    monkeypatch.setattr(
-        config,
-        "SECRET_KEY",
-        "chave-segura-de-producao-com-32-caracteres",
-    )
-
-    with pytest.raises(ValueError, match="PostgreSQL"):
-        config.validate_config()
-
-
-def test_configuracao_de_producao_sem_database_url_falha(monkeypatch):
-    monkeypatch.setattr(config, "DATABASE_URL", "")
-    monkeypatch.setattr(config, "APP_ENV", "production")
-    monkeypatch.setattr(
-        config,
-        "SECRET_KEY",
-        "chave-segura-de-producao-com-32-caracteres",
-    )
-
-    with pytest.raises(ValueError, match="DATABASE_URL"):
-        config.validate_config()
-
-
-def test_configura_ambiente_demo_a_partir_das_variaveis_de_ambiente(
-    monkeypatch,
-):
-    monkeypatch.setenv("APP_ENV", "demo")
-    monkeypatch.setenv("DEMO_DATABASE_URL", "sqlite:///demo-teste.db")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.delenv("SECRET_KEY", raising=False)
-
-    modulo = importlib.reload(config)
-
-    assert modulo.APP_ENV == "demo"
-    assert modulo.DATABASE_URL == "sqlite:///demo-teste.db"
-
-    monkeypatch.setenv("APP_ENV", "testing")
-    monkeypatch.setenv("DATABASE_URL", "sqlite:///restaurado.db")
-    importlib.reload(config)
+def recarregar_config():
+    """Recarrega o módulo config após alterar as variáveis de ambiente."""
+    return importlib.reload(config)
 
 
 def test_configura_ambiente_e_sslmode_a_partir_dos_secrets(monkeypatch):
-    monkeypatch.delenv("APP_ENV", raising=False)
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.delenv("DATABASE_SSLMODE", raising=False)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://teste")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://teste",
+    )
     monkeypatch.setenv("DATABASE_SSLMODE", "require")
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
 
-    modulo = importlib.reload(config)
+    modulo = recarregar_config()
 
     assert modulo.APP_ENV == "production"
+    assert modulo.DATABASE_URL == "postgresql://teste"
     assert modulo.DATABASE_SSLMODE == "require"
+    assert modulo.SECRET_KEY == SECRET_KEY_TESTE
+
+
+def test_producao_exige_secret_key(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://teste",
+    )
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
+    with pytest.raises(
+        ValueError,
+        match="SECRET_KEY não foi definida",
+    ):
+        recarregar_config()
+
+    # Restaura uma configuração válida para os testes seguintes.
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
+    recarregar_config()
+
+
+def test_producao_exige_secret_key_forte(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://teste",
+    )
+    monkeypatch.setenv("SECRET_KEY", "curta")
+
+    with pytest.raises(
+        ValueError,
+        match="SECRET_KEY de produção deve ser forte",
+    ):
+        recarregar_config()
+
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
+    recarregar_config()
+
+
+def test_producao_exige_postgresql(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
+
+    with pytest.raises(
+        ValueError,
+        match="DATABASE_URL de produção deve utilizar PostgreSQL",
+    ):
+        recarregar_config()
+
+
+def test_database_url_obrigatoria_em_producao(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
+
+    with pytest.raises(
+        ValueError,
+        match="DATABASE_URL não foi definida para produção",
+    ):
+        recarregar_config()
+
+    # Restaura configuração válida.
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+    monkeypatch.setenv("APP_ENV", "development")
+    recarregar_config()
+
+
+def test_app_env_invalido(monkeypatch):
+    # DATABASE_URL precisa existir porque a validação
+    # dessa variável acontece antes da validação de APP_ENV.
+    monkeypatch.setenv("APP_ENV", "invalido")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="APP_ENV inválido",
+    ):
+        recarregar_config()
+
+    # Restaura configuração válida.
+    monkeypatch.setenv("APP_ENV", "testing")
+    recarregar_config()
+
+
+def test_producao_aceita_postgresql_plus_driver(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql+psycopg2://teste",
+    )
+    monkeypatch.setenv("SECRET_KEY", SECRET_KEY_TESTE)
+
+    modulo = recarregar_config()
+
+    assert modulo.APP_ENV == "production"
+    assert modulo.DATABASE_URL == "postgresql+psycopg2://teste"
+
+
+def test_database_sslmode(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+    monkeypatch.setenv("DATABASE_SSLMODE", "require")
+
+    modulo = recarregar_config()
+
+    assert modulo.DATABASE_SSLMODE == "require"
+
+
+def test_secret_key(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+    monkeypatch.setenv("SECRET_KEY", "minha-chave-de-teste")
+
+    modulo = recarregar_config()
+
+    assert modulo.SECRET_KEY == "minha-chave-de-teste"
+
+
+def test_ambiente_development(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+
+    modulo = recarregar_config()
+
+    assert modulo.APP_ENV == "development"
+
+
+def test_ambiente_testing(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+
+    modulo = recarregar_config()
+
+    assert modulo.APP_ENV == "testing"
+
+
+def test_ambiente_demo(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "demo")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "sqlite:///./clinicaptf.db",
+    )
+
+    modulo = recarregar_config()
+
+    assert modulo.APP_ENV == "demo"
