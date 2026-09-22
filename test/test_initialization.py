@@ -49,3 +49,21 @@ def test_inicializar_aplicacao_prepara_dados_no_demo(monkeypatch):
 
     migrations.assert_called_once_with()
     demo.assert_called_once_with()
+
+
+def test_inicializar_aplicacao_provisiona_admin_em_producao(monkeypatch):
+    migrations = Mock()
+    provisionar = Mock()
+    monkeypatch.setattr(initialization, "executar_migrations", migrations)
+    monkeypatch.setattr(
+        initialization,
+        "provisionar_admin_inicialmente",
+        provisionar,
+    )
+    monkeypatch.setattr(initialization, "APP_ENV", "production")
+
+    initialization.inicializar_aplicacao.cache_clear()
+    initialization.inicializar_aplicacao()
+
+    migrations.assert_called_once_with()
+    provisionar.assert_called_once_with()

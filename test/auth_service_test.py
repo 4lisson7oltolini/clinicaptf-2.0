@@ -4,12 +4,49 @@ from sqlalchemy.exc import IntegrityError
 
 from services.auth_service import (
     criar_usuario,
+    provisionar_admin_inicial,
     autenticar,
     listar_usuarios,
     remover_usuario,
     UsuarioJaExisteError,
     DadosUsuarioInvalidosError,
 )
+
+
+def test_provisionar_admin_inicial_cria_apenas_o_primeiro_admin(db_session):
+    usuario = provisionar_admin_inicial(
+        db_session,
+        username="admin-inicial",
+        senha="senha-segura",
+        nome_completo="Administrador Inicial",
+    )
+
+    assert usuario is not None
+    assert usuario.perfil == "admin"
+    assert provisionar_admin_inicial(
+        db_session,
+        username="outro-admin",
+        senha="outra-senha",
+        nome_completo="Outro Administrador",
+    ) is None
+
+
+def test_provisionar_admin_inicial_rejeita_username_nao_admin(db_session):
+    criar_usuario(
+        db_session,
+        username="admin-inicial",
+        senha="senha-segura",
+        nome_completo="Usuário Existente",
+        perfil="atendente",
+    )
+
+    with pytest.raises(DadosUsuarioInvalidosError, match="não administrativa"):
+        provisionar_admin_inicial(
+            db_session,
+            username="admin-inicial",
+            senha="outra-senha",
+            nome_completo="Administrador Inicial",
+        )
 
 
 def test_autentica_com_senha_correta(db_session):
