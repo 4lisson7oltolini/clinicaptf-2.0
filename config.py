@@ -19,19 +19,34 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _config_value(name: str) -> str:
+    """Lê configuração do ambiente ou dos secrets do Streamlit Cloud."""
+
+    value = os.getenv(name, "").strip()
+
+    if value:
+        return value
+
+    try:
+        import streamlit as st
+
+        return str(st.secrets.get(name, "")).strip()
+    except Exception:
+        return ""
+
+
 # ============================================================
 # Ambiente da aplicação
 # ============================================================
 
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_URL = _config_value("DATABASE_URL")
 
 if APP_ENV == "demo":
-    DATABASE_URL = os.getenv(
-        "DEMO_DATABASE_URL",
-        "sqlite:///./clinicaptf_demo.db",
-    ).strip()
+    DATABASE_URL = _config_value("DEMO_DATABASE_URL") or (
+        "sqlite:///./clinicptf_demo.db"
+    )
 elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
     DATABASE_URL = "sqlite:///./clinicaptf.db"
 
@@ -40,7 +55,11 @@ elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
 # Chave secreta
 # ============================================================
 
-SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+SECRET_KEY = _config_value("SECRET_KEY")
+
+INITIAL_ADMIN_USERNAME = _config_value("INITIAL_ADMIN_USERNAME")
+INITIAL_ADMIN_PASSWORD = _config_value("INITIAL_ADMIN_PASSWORD")
+INITIAL_ADMIN_NAME = _config_value("INITIAL_ADMIN_NAME")
 
 INSECURE_SECRET_KEYS = {
     "change-me-in-your-local-env",

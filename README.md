@@ -525,6 +525,25 @@ A aplicação identifica o banco através da variável `DATABASE_URL`.
 
 A conexão com SQLite continua disponível para desenvolvimento local e demonstrações.
 
+### Primeiro administrador no Streamlit Community Cloud
+
+Em um banco PostgreSQL novo, a aplicação cria as tabelas, mas não existe uma
+conta administrativa automaticamente. Configure estes três secrets no painel
+do Streamlit Cloud antes de abrir a aplicação pela primeira vez:
+
+```text
+INITIAL_ADMIN_USERNAME
+INITIAL_ADMIN_PASSWORD
+INITIAL_ADMIN_NAME
+```
+
+Os valores são lidos por `st.secrets` ou por variáveis de ambiente. A aplicação
+só usa esses secrets quando `APP_ENV=production` e ainda não existe nenhum
+usuário com perfil `admin`. Não há tela pública para criar administradores.
+
+Depois do primeiro login, remova os três secrets de provisionamento e reinicie
+a aplicação. O administrador já criado permanecerá no PostgreSQL.
+
 ---
 
 ## Segurança

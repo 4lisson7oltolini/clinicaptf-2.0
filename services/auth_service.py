@@ -116,6 +116,47 @@ def criar_usuario(
     return usuario
 
 
+def provisionar_admin_inicial(
+    db: Session,
+    username: str,
+    senha: str,
+    nome_completo: str,
+) -> Usuario | None:
+    """Cria o primeiro administrador, caso ainda não exista."""
+
+    usuario_existente = (
+        db.query(Usuario)
+        .filter(Usuario.username == username.strip())
+        .first()
+    )
+
+    if usuario_existente is not None:
+        if usuario_existente.perfil != "admin":
+            raise DadosUsuarioInvalidosError(
+                "O username do administrador inicial já pertence a "
+                "uma conta não administrativa."
+            )
+
+        return None
+
+    admin_existente = (
+        db.query(Usuario)
+        .filter(Usuario.perfil == "admin")
+        .first()
+    )
+
+    if admin_existente is not None:
+        return None
+
+    return criar_usuario(
+        db,
+        username=username,
+        senha=senha,
+        nome_completo=nome_completo,
+        perfil="admin",
+    )
+
+
 def listar_usuarios(db: Session) -> list[Usuario]:
     """Lista usuários cadastrados em ordem alfabética."""
 
