@@ -32,7 +32,7 @@ if APP_ENV == "demo":
         "DEMO_DATABASE_URL",
         "sqlite:///./clinicaptf_demo.db",
     ).strip()
-elif not DATABASE_URL:
+elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
     DATABASE_URL = "sqlite:///./clinicaptf.db"
 
 
@@ -41,6 +41,12 @@ elif not DATABASE_URL:
 # ============================================================
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+
+INSECURE_SECRET_KEYS = {
+    "change-me-in-your-local-env",
+    "defina-uma-chave-segura-fora-do-repositorio",
+    "dev-secret-change-me",
+}
 
 
 # ============================================================
@@ -60,6 +66,11 @@ def validate_config() -> None:
     """
 
     if not DATABASE_URL:
+        if APP_ENV == "production":
+            raise ValueError(
+                "DATABASE_URL não foi definida para produção."
+            )
+
         raise ValueError(
             "DATABASE_URL não foi definida."
         )
@@ -71,15 +82,24 @@ def validate_config() -> None:
         )
 
     if APP_ENV == "production":
+        if not DATABASE_URL.startswith(("postgresql://", "postgresql+")):
+            raise ValueError(
+                "DATABASE_URL de produção deve utilizar PostgreSQL."
+            )
+
         if not SECRET_KEY:
             raise ValueError(
                 "SECRET_KEY não foi definida. "
                 "Defina uma SECRET_KEY segura no ambiente de produção."
             )
 
-        if SECRET_KEY == "dev-secret-change-me":
+        if (
+            len(SECRET_KEY) < 32
+            or SECRET_KEY.lower() in INSECURE_SECRET_KEYS
+        ):
             raise ValueError(
-                "A SECRET_KEY padrão não pode ser utilizada em produção."
+                "A SECRET_KEY de produção deve ser forte, exclusiva e ter "
+                "pelo menos 32 caracteres."
             )
 
 

@@ -473,7 +473,12 @@ docker build -t clinicaptf .
 Para executar:
 
 ```bash
-docker run -p 8501:8501 clinicaptf
+docker run \
+    -p 8501:8501 \
+    -e APP_ENV=production \
+    -e DATABASE_URL="$DATABASE_URL" \
+    -e SECRET_KEY="$SECRET_KEY" \
+    clinicaptf
 ```
 
 A aplicação poderá ser acessada pela porta:
@@ -494,7 +499,27 @@ Exemplo de configuração:
 
 ```env
 DATABASE_URL=postgresql://usuario:senha@localhost:5432/clinicaptf
+APP_ENV=production
+SECRET_KEY=defina-uma-chave-segura-fora-do-repositorio
 ```
+
+A URL deve usar o esquema `postgresql://` ou `postgresql+psycopg2://`. O
+driver `psycopg2` já está incluído em `requirements.txt`.
+
+Em produção, defina `DATABASE_URL`, `APP_ENV=production` e uma `SECRET_KEY`
+segura como variáveis do ambiente de execução. Não coloque credenciais reais
+no código, no README ou em arquivos versionados.
+
+Antes de iniciar a aplicação em um banco novo, execute as migrations usando a
+mesma `DATABASE_URL` do processo da aplicação:
+
+```bash
+alembic upgrade head
+```
+
+O schema é controlado exclusivamente pelo Alembic. A aplicação também executa
+as migrations pendentes durante a inicialização, mas a execução explícita
+permite validar a conexão e o banco antes de liberar o serviço.
 
 A aplicação identifica o banco através da variável `DATABASE_URL`.
 
