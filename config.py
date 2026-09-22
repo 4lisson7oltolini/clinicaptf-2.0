@@ -42,6 +42,12 @@ elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 
+INSECURE_SECRET_KEYS = {
+    "change-me-in-your-local-env",
+    "defina-uma-chave-segura-fora-do-repositorio",
+    "dev-secret-change-me",
+}
+
 
 # ============================================================
 # Validação das configurações
@@ -87,9 +93,13 @@ def validate_config() -> None:
                 "Defina uma SECRET_KEY segura no ambiente de produção."
             )
 
-        if SECRET_KEY == "dev-secret-change-me":
+        if (
+            len(SECRET_KEY) < 32
+            or SECRET_KEY.lower() in INSECURE_SECRET_KEYS
+        ):
             raise ValueError(
-                "A SECRET_KEY padrão não pode ser utilizada em produção."
+                "A SECRET_KEY de produção deve ser forte, exclusiva e ter "
+                "pelo menos 32 caracteres."
             )
 
 

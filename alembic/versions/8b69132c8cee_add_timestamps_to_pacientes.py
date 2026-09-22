@@ -22,25 +22,24 @@ def upgrade() -> None:
         )
     )
 
-    # 2. Preenche os registros existentes
-    # Usa criado_em como valor inicial de atualizado_em
-    op.execute(
-        sa.text(
-            """
-            UPDATE pacientes
-            SET atualizado_em = criado_em
-            WHERE atualizado_em IS NULL
-            """
-        )
-    )
-
-    # 3. Garante que criado_em não possua NULL
+    # 2. Garante que criado_em não possua NULL
     op.execute(
         sa.text(
             """
             UPDATE pacientes
             SET criado_em = CURRENT_TIMESTAMP
             WHERE criado_em IS NULL
+            """
+        )
+    )
+
+    # 3. Usa criado_em como valor inicial de atualizado_em
+    op.execute(
+        sa.text(
+            """
+            UPDATE pacientes
+            SET atualizado_em = criado_em
+            WHERE atualizado_em IS NULL
             """
         )
     )

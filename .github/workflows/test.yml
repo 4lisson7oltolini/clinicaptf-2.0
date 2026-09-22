@@ -29,7 +29,9 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Instalar dependências
         run: |
@@ -42,7 +44,7 @@ jobs:
 
       - name: Executar cobertura
         run: |
-          python -m pytest --cov=. --cov-report=term-missing
+          python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=90
 
       - name: Preparar banco SQLite do CI
         run: |
