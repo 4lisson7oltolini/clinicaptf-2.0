@@ -39,7 +39,7 @@ def _config_value(name: str) -> str:
 # Ambiente da aplicação
 # ============================================================
 
-APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+APP_ENV = (_config_value("APP_ENV") or "development").lower()
 
 DATABASE_URL = _config_value("DATABASE_URL")
 
@@ -56,6 +56,8 @@ elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
 # ============================================================
 
 SECRET_KEY = _config_value("SECRET_KEY")
+
+DATABASE_SSLMODE = _config_value("DATABASE_SSLMODE")
 
 INITIAL_ADMIN_USERNAME = _config_value("INITIAL_ADMIN_USERNAME")
 INITIAL_ADMIN_PASSWORD = _config_value("INITIAL_ADMIN_PASSWORD")

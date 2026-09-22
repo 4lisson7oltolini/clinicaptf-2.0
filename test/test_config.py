@@ -108,3 +108,17 @@ def test_configura_ambiente_demo_a_partir_das_variaveis_de_ambiente(
     monkeypatch.setenv("APP_ENV", "testing")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///restaurado.db")
     importlib.reload(config)
+
+
+def test_configura_ambiente_e_sslmode_a_partir_dos_secrets(monkeypatch):
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_SSLMODE", raising=False)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://teste")
+    monkeypatch.setenv("DATABASE_SSLMODE", "require")
+
+    modulo = importlib.reload(config)
+
+    assert modulo.APP_ENV == "production"
+    assert modulo.DATABASE_SSLMODE == "require"

@@ -501,6 +501,8 @@ Exemplo de configuração:
 DATABASE_URL=postgresql://usuario:senha@localhost:5432/clinicaptf
 APP_ENV=production
 SECRET_KEY=defina-uma-chave-segura-fora-do-repositorio
+# Use require quando o provedor PostgreSQL exigir conexão TLS.
+DATABASE_SSLMODE=require
 ```
 
 A URL deve usar o esquema `postgresql://` ou `postgresql+psycopg2://`. O
@@ -509,6 +511,9 @@ driver `psycopg2` já está incluído em `requirements.txt`.
 Em produção, defina `DATABASE_URL`, `APP_ENV=production` e uma `SECRET_KEY`
 segura como variáveis do ambiente de execução. Não coloque credenciais reais
 no código, no README ou em arquivos versionados.
+
+Quando o provedor exigir TLS, defina também `DATABASE_SSLMODE=require`. Se a
+URL já contiver `sslmode`, mantenha uma única configuração consistente.
 
 Antes de iniciar a aplicação em um banco novo, execute as migrations usando a
 mesma `DATABASE_URL` do processo da aplicação:

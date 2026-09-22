@@ -8,16 +8,24 @@ A criação e alteração das tabelas é responsabilidade do Alembic.
 """
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-from config import DATABASE_URL
+from config import APP_ENV, DATABASE_SSLMODE, DATABASE_URL
 
 
-connect_args = (
-    {"check_same_thread": False}
-    if DATABASE_URL.startswith("sqlite")
-    else {}
-)
+database_url = make_url(DATABASE_URL)
+
+if database_url.get_backend_name() == "sqlite":
+    connect_args = {"check_same_thread": False}
+elif (
+    APP_ENV == "production"
+    and database_url.get_backend_name() == "postgresql"
+    and "sslmode" not in database_url.query
+):
+    connect_args = {"sslmode": DATABASE_SSLMODE or "require"}
+else:
+    connect_args = {}
 
 
 engine = create_engine(
