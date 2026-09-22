@@ -44,6 +44,33 @@ def test_validate_config_aceita_producao_com_chave_segura(monkeypatch):
     config.validate_config()
 
 
+def test_validate_config_rejeita_sqlite_em_producao(monkeypatch):
+    monkeypatch.setattr(config, "DATABASE_URL", "sqlite:///producao.db")
+    monkeypatch.setattr(config, "APP_ENV", "production")
+    monkeypatch.setattr(config, "SECRET_KEY", "chave-segura")
+
+    with pytest.raises(ValueError, match="PostgreSQL"):
+        config.validate_config()
+
+
+def test_validate_config_rejeita_banco_nao_postgresql_em_producao(monkeypatch):
+    monkeypatch.setattr(config, "DATABASE_URL", "mysql://producao")
+    monkeypatch.setattr(config, "APP_ENV", "production")
+    monkeypatch.setattr(config, "SECRET_KEY", "chave-segura")
+
+    with pytest.raises(ValueError, match="PostgreSQL"):
+        config.validate_config()
+
+
+def test_configuracao_de_producao_sem_database_url_falha(monkeypatch):
+    monkeypatch.setattr(config, "DATABASE_URL", "")
+    monkeypatch.setattr(config, "APP_ENV", "production")
+    monkeypatch.setattr(config, "SECRET_KEY", "chave-segura")
+
+    with pytest.raises(ValueError, match="DATABASE_URL"):
+        config.validate_config()
+
+
 def test_configura_ambiente_demo_a_partir_das_variaveis_de_ambiente(
     monkeypatch,
 ):

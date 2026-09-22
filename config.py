@@ -32,7 +32,7 @@ if APP_ENV == "demo":
         "DEMO_DATABASE_URL",
         "sqlite:///./clinicaptf_demo.db",
     ).strip()
-elif not DATABASE_URL:
+elif not DATABASE_URL and APP_ENV in {"development", "testing"}:
     DATABASE_URL = "sqlite:///./clinicaptf.db"
 
 
@@ -60,6 +60,11 @@ def validate_config() -> None:
     """
 
     if not DATABASE_URL:
+        if APP_ENV == "production":
+            raise ValueError(
+                "DATABASE_URL não foi definida para produção."
+            )
+
         raise ValueError(
             "DATABASE_URL não foi definida."
         )
@@ -71,6 +76,11 @@ def validate_config() -> None:
         )
 
     if APP_ENV == "production":
+        if not DATABASE_URL.startswith(("postgresql://", "postgresql+")):
+            raise ValueError(
+                "DATABASE_URL de produção deve utilizar PostgreSQL."
+            )
+
         if not SECRET_KEY:
             raise ValueError(
                 "SECRET_KEY não foi definida. "
